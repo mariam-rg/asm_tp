@@ -1,88 +1,132 @@
 section .data
-    result db "Result: ", 0
-    newline db 0xA
-    buffer db 32
+    
+global _start
+
+section .bss
+    tmp resb 1
 
 section .text
-    global _start
 
 _start:
-    ; Lecture du premier nombre passé en paramètre
-    mov rdi, 1          ; descripteur de fichier (1 pour stdout)
-    mov rsi, [rsp + 8]  
-    call print_string   
-    call read_number    
+    pop r10 ; number of arguments
+    cmp r10, 3
+    jne _error
 
-    ; Conversion du premier nombre en entier
-    call ascii_to_int   ; convertit le nombre ASCII en entier
-    mov ebx, eax        
 
-    ; Lecture du deuxième nombre passé en paramètre
-    mov rsi, [rsp + 16] 
-    call print_string   
-    call read_number    
+    pop r10 
+    
+    xor r10, r10
 
-    ; Conversion du deuxième nombre en entier
-    call ascii_to_int   ; convertit le nombre ASCII en entier
-    add eax, ebx        ; additionne le premier et le deuxième nombre
+    pop r8 
+     
+    call _conv
 
-    ; Affichage du résultat
-    mov rdi, 1          ; descripteur de fichier (1 pour stdout)
-    mov rsi, result     
-    call print_string   ; affiche le message "Result: "
-    call int_to_ascii   
-    call print_string   
-    mov rsi, newline    
-    call print_string   
+    mov r11, rax
+    pop r8
 
-    ; Sortie du programme
-    mov rax, 60         
-    xor rdi, rdi        
-    syscall
+    call _conv
+    mov r10, rax
 
-; Fonction pour lire un nombre depuis l'entrée standard
-read_number:
-    mov rax, 0          
-    mov rdi, 0          
-    mov rdx, 32         
-    syscall
+
+    add r11, r10
+
+
+    xor rax, rax
+    xor rdi, rdi
+    xor rsi, rsi
+    xor rdx, rdx
+
+    jmp _conv_inv
+
+    jmp _error
+
+    
+
+    
+
+
+;_affiche:
+;    mov rax, 1          
+;    mov rdi, 1          
+;    mov rsi, 
+;    mov rdx, 1            
+;    syscall
+
+
+; rcx, rdx, rax, r8, rbx
+_conv:
+    xor rax,rax
+    xor rcx, rcx
+    xor dl, dl
+    xor rdx, rdx
+
+_conv_loop:
+
+    mov dl, [r8+rcx]
+
+    cmp dl, byte 0
+    je _conv_end
+
+    sub dl, 48
+    add al, dl
+
+    cmp [r8+rcx+1], byte 0
+    je _conv_end
+
+    mov bl, 10
+    mul bl
+    inc rcx
+
+    
+    jmp _conv_loop
+
+_conv_end:
     ret
 
-; Fonction pour afficher une chaîne de caractères
-print_string:
+
+
+_conv_inv:
+   mov rax, r11
+_loop:
+
+    cmp rax, byte 1
+    jl _affiche
+
+    xor rdx, rdx
+    mov rbx, 10
+    div rbx
+    add rdx, 48
+    push rdx
+   jmp _loop
+
+_affiche:
+_loop_aff:
+    xor rdx, rdx
+    pop rdx
+    test rdx, rdx
+    je _end
+
+    mov rax, 1
+    mov rdi, 1 
+    mov [tmp], rdx
+    mov rsi, tmp
+    mov rdx, 1            
+    syscall
+    
+    jmp _loop_aff
+
+     
+
+_end:
+
     mov rax, 1          
-    mov rdx, 32         
+    mov rdi, 1 
+    mov [tmp], byte 10
+    mov rsi, tmp
+    mov rdx, 1            
     syscall
-    ret
 
-; Fonction pour convertir un nombre ASCII en entier
-ascii_to_int:
-    xor rcx, rcx        
-    xor rax, rax        
-.loop:
-    movzx edx, byte [rsi + rcx] ; charge le caractère ASCII
-    test dl, dl        
-    jz .done           
-    sub dl, '0'        
-    imul rax, 10       
-    add rax, rdx       
-    inc rcx            
-    jmp .loop          
-.done:
-    ret
-
-; Fonction pour convertir un entier en ASCII
-int_to_ascii:
-    mov rdi, buffer     
-    mov rcx, 10         
-    mov rbx, 10         
-    .again:
-        mov rdx, 0      
-        div rbx         
-        add dl, '0'     
-        dec rdi         
-        mov [rdi], dl   
-        test rax, rax  
-        jnz .again      
-    mov rsi, rdi        
-    ret
+_error:
+    mov rax, 60         
+    mov rdi, 0    
+    syscall
