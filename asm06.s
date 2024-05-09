@@ -1,82 +1,119 @@
+sys_stdin   equ 0
+sys_stdout  equ 1
+
+sys_read    equ 0
+sys_write   equ 1
+sys_exit    equ 60
+
 section .data
-    is_prime db 1       
-    newline db 0xA      
-    buffer db 32        
-    prime_msg db "Le nombre est premier", 0xA
-    not_prime_msg db "Le nombre n'est pas premier", 0xA
+
+section .bss
+    input resb 100
 
 section .text
     global _start
 
 _start:
-    ; Lecture du nombre depuis l'entrée standard
-    mov rdi, 0          
-    mov rsi, buffer     
-    mov rdx, 32         
-    call read_number    
 
-    ; Conversion du nombre en entier
-    call ascii_to_int   
-    mov ebx, eax        
+.read_input: 
+    mov rax, sys_read
+    mov rdi, sys_stdin
+    mov rsi, input
+    mov rdx, 100
+    syscall
 
-    ; Vérification de primalité
-    mov ecx, 2          
-.loop:
-    cmp ecx, ebx        
-    jge .prime          
-    mov eax, ebx        
-    xor edx, edx        
-    div ecx             
-    test edx, edx       
-    jz .not_prime       
-    inc ecx             
-    jmp .loop           
-.prime:
-    mov byte [is_prime], 0  
-    jmp .end_program
-.not_prime:
-    mov byte [is_prime], 1  
-.end_program:
-    ; Affiche le résultat
-    cmp byte [is_prime], 0
-    je .print_prime
-    mov rdi, not_prime_msg
-    call print_string
-    jmp .exit_program
-.print_prime:
-    mov rdi, prime_msg
-    call print_string
-.exit_program:
+    mov rdi, rsi 
+    call atoi 
+    mov rbx, rax 
+
+
+.find_sqrt:
+    cvtsi2sd xmm0, rbx 
+    sqrtsd xmm0, xmm0 
+
+    cvttsd2si rbx, xmm0 
+
+    mov rdi, rbx 
+    mov rsi, rax 
+    mov rcx, 2 
+
+.is_primary:
+    xor rdx, rdx 
+    mov rax, rsi 
+    mov rbx, rcx 
+    div rbx
+
+    cmp rdx, 0
+    jz .error
+
+    cmp rcx, rdi 
+    jz .success
+
+    inc rcx 
+    jmp .is_primary
+
+
+.success:
+    mov rax, sys_exit
+    mov rdi, 0
+    syscall
+
+.error:
+    mov rax, sys_exit
+    mov rdi, 1
+    syscall
+
+atoi:
+    call store_value
+    mov rcx, rax
+    xor rax, rax
+
+.atoi_loop:
     
-    mov eax, 60         
-    xor edi, edi        
-    syscall
+    cmp   rsi, rcx
+    jge   .atoi_end
 
-; Lire un nombre depuis l'entrée standard
-read_number:
-    mov rax, 0          
-    syscall
+    mov   dl, byte [rdi + rsi]
+
+    cmp dl, 10
+    jz .atoi_end
+
+    cmp dl, '0'
+    jl .atoi_err
+
+    cmp dl, '9'
+    jg .atoi_err
+
+    add   rax, rax
+    lea   rax, [4 * rax + rax]
+
+    sub   dl, "0" 
+    movzx rdx, dl
+    add   rax, rdx
+
+.atoi_inc:
+    inc   rsi            
+    jmp   .atoi_loop
+
+.atoi_err:
+    mov rax, -1
     ret
 
-; Fonction pour afficher une chaîne de caractères
-print_string:
-    mov rax, 1         
-    mov rdx, 32         
-    syscall
+.atoi_end:
+    xor rdx, rdx
     ret
 
-; Fonction pour convertir un nombre ASCII en entier
-ascii_to_int:
-    xor rcx, rcx        
-    xor rax, rax        
-.loop:
-    movzx edx, byte [rsi + rcx] ; Charge le caractère ASCII
-    test dl, dl        
-    jz .done           
-    sub dl, '0'        
-    imul rax, 10       
-    add rax, rdx       
-    inc rcx            
-    jmp .loop          
-.done:
+
+store_value: 
+    xor rax, rax
+
+.store_value_loop:
+
+    cmp [rdi + rax], byte 0
+    jz .store_value_end
+
+    inc rax
+    jmp .store_value_loop
+
+.store_value_end:
     ret
