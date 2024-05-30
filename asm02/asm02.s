@@ -9,7 +9,7 @@ section .bss
 section .text
 
 _start:
-    ; Affiche '1337'
+
     mov rax, 1
     mov rdi, 1
     mov rsi, msg
