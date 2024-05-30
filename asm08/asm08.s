@@ -12,22 +12,22 @@ section .text
     global _start
 
 _start:
-    pop r8 
+    pop r8
 
-    
+
     cmp r8, 2
     jnz .error
 
-    pop rdi 
-    pop rdi 
+    pop rdi
+    pop rdi
 
     call atoi
 
-    
+
     cmp rax, -1
     jnz .error
 
-    mov r9, rax 
+    mov r9, rax
 
 .convert_to_binary:
     mov rbx, 2
@@ -36,17 +36,17 @@ _start:
     cmp rax, 1
     jl .display_binary
 
-    
-    div rbx
-    add rdx, byte 48 
 
-    push rdx 
+    div rbx
+    add rdx, byte 48
+
+    push rdx
     xor rdx, rdx
 
     jmp .convert_to_binary_loop
 
 .display_binary:
-    pop rdx 
+    pop rdx
 
     test rdx,rdx
     jz .display_binary_end
@@ -61,7 +61,7 @@ _start:
     jmp .display_binary
 
 .display_binary_end:
-    
+
     mov rax, sys_write
     mov rdi, sys_stdout
     mov [txt], byte 10
@@ -83,24 +83,24 @@ _start:
     syscall
 
 atoi:
-    xor rsi, rsi 
+    xor rsi, rsi
     call strlen
     mov rcx, rax
     xor rax, rax
 
 .atoi_loop:
-    
+
     cmp   rsi, rcx
     jge   .atoi_end
 
-    
+
     mov   dl, byte [rdi + rsi]
 
-    
+
     cmp dl, 10
     jz .atoi_end
 
-    
+
     cmp dl, '0'
     jl .atoi_err
 
@@ -110,12 +110,12 @@ atoi:
     add   rax, rax
     lea   rax, [4 * rax + rax]
 
-    sub   dl, "0" 
+    sub   dl, "0"
     movzx rdx, dl
     add   rax, rdx
 
 .atoi_inc:
-    inc   rsi            
+    inc   rsi
     jmp   .atoi_loop
 
 .atoi_err:
@@ -127,7 +127,7 @@ atoi:
     ret
 
 
-strlen: 
+strlen:
     xor rax, rax
 
 .strlen_loop:

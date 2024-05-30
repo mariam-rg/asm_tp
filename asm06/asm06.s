@@ -15,41 +15,41 @@ section .text
 
 _start:
 
-.read_input: 
+.read_input:
     mov rax, sys_read
     mov rdi, sys_stdin
     mov rsi, input
     mov rdx, 100
     syscall
 
-    mov rdi, rsi 
-    call atoi 
-    mov rbx, rax 
+    mov rdi, rsi
+    call atoi
+    mov rbx, rax
 
 
 .find_sqrt:
-    cvtsi2sd xmm0, rbx 
-    sqrtsd xmm0, xmm0 
+    cvtsi2sd xmm0, rbx
+    sqrtsd xmm0, xmm0
 
-    cvttsd2si rbx, xmm0 
+    cvttsd2si rbx, xmm0
 
-    mov rdi, rbx 
-    mov rsi, rax 
-    mov rcx, 2 
+    mov rdi, rbx
+    mov rsi, rax
+    mov rcx, 2
 
 .is_primary:
-    xor rdx, rdx 
-    mov rax, rsi 
-    mov rbx, rcx 
+    xor rdx, rdx
+    mov rax, rsi
+    mov rbx, rcx
     div rbx
 
     cmp rdx, 0
     jz .error
 
-    cmp rcx, rdi 
+    cmp rcx, rdi
     jz .success
 
-    inc rcx 
+    inc rcx
     jmp .is_primary
 
 
@@ -69,7 +69,7 @@ atoi:
     xor rax, rax
 
 .atoi_loop:
-    
+
     cmp   rsi, rcx
     jge   .atoi_end
 
@@ -87,12 +87,12 @@ atoi:
     add   rax, rax
     lea   rax, [4 * rax + rax]
 
-    sub   dl, "0" 
+    sub   dl, "0"
     movzx rdx, dl
     add   rax, rdx
 
 .atoi_inc:
-    inc   rsi            
+    inc   rsi
     jmp   .atoi_loop
 
 .atoi_err:
@@ -104,7 +104,7 @@ atoi:
     ret
 
 
-store_value: 
+store_value:
     xor rax, rax
 
 .store_value_loop:

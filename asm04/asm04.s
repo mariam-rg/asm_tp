@@ -1,6 +1,5 @@
 section .data
-   
-   
+
 global _start
 
 section .bss
@@ -9,10 +8,10 @@ section .bss
 section .text
 
 _start:
-    mov rax, 0      
-    mov rdi, 0    
-    mov rsi, input      
-    mov rdx, 64      
+    mov rax, 0
+    mov rdi, 0
+    mov rsi, input
+    mov rdx, 64
     syscall
 
 
@@ -58,19 +57,15 @@ _conv_loop:
 _conv_end:
     ret
 
- 
-
 _pair:
-    mov rax, 60          
-    mov rdi, 0                    
+    mov rax, 60
+    mov rdi, 0
     syscall
 
 
 
-   
 _notpair:
-    mov rax, 60          
-    mov rdi, 1                    
+    mov rax, 60
+    mov rdi, 1
     syscall
 
-   

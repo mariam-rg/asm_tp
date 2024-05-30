@@ -1,5 +1,5 @@
 section .data
-    
+
 global _start
 
 section .bss
@@ -13,12 +13,10 @@ _start:
     jne _error
 
 
-    pop r10 
-    
+    pop r10
     xor r10, r10
 
-    pop r8 
-     
+    pop r8
     call _conv
 
     mov r11, rax
@@ -40,16 +38,14 @@ _start:
 
     jmp _error
 
-    
 
-    
 
 
 ;_affiche:
-;    mov rax, 1          
-;    mov rdi, 1          
-;    mov rsi, 
-;    mov rdx, 1            
+;    mov rax, 1
+;    mov rdi, 1
+;    mov rsi,
+;    mov rdx, 1
 ;    syscall
 
 
@@ -77,7 +73,7 @@ _conv_loop:
     mul bl
     inc rcx
 
-    
+
     jmp _conv_loop
 
 _conv_end:
@@ -107,26 +103,26 @@ _loop_aff:
     je _end
 
     mov rax, 1
-    mov rdi, 1 
+    mov rdi, 1
     mov [tmp], rdx
     mov rsi, tmp
-    mov rdx, 1            
+    mov rdx, 1
     syscall
-    
+
     jmp _loop_aff
 
-     
+
 
 _end:
 
-    mov rax, 1          
-    mov rdi, 1 
+    mov rax, 1
+    mov rdi, 1
     mov [tmp], byte 10
     mov rsi, tmp
-    mov rdx, 1            
+    mov rdx, 1
     syscall
 
 _error:
-    mov rax, 60         
-    mov rdi, 0    
+    mov rax, 60
+    mov rdi, 0
     syscall
