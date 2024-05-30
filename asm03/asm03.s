@@ -26,10 +26,10 @@ _start:
 
 
 _affiche:
-    mov rax, 1          
-    mov rdi, 1          
-    mov rsi, msg        
-    mov rdx, 5          
+    mov rax, 1
+    mov rdi, 1
+    mov rsi, msg
+    mov rdx, 5
     syscall
 
     mov rax, 60

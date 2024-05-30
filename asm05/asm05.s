@@ -8,7 +8,7 @@ section .bss
 section .text
 
 _start:
-    pop r10 ; number of arguments
+    pop r10 ; nombre d'argument
     cmp r10, 3
     jne _error
 
@@ -41,12 +41,7 @@ _start:
 
 
 
-;_affiche:
-;    mov rax, 1
-;    mov rdi, 1
-;    mov rsi,
-;    mov rdx, 1
-;    syscall
+
 
 
 ; rcx, rdx, rax, r8, rbx
