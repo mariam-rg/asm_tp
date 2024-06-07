@@ -1,10 +1,3 @@
-sys_stdin   equ 0
-sys_stdout  equ 1
-
-sys_read    equ 0
-sys_write   equ 1
-sys_exit    equ 60
-
 section .data
 
 section .bss
@@ -15,74 +8,78 @@ section .text
 
 _start:
 
-.read_input:
-    mov rax, sys_read
-    mov rdi, sys_stdin
+_read_input:
+    mov rax, 0
+    mov rdi, 0
     mov rsi, input
     mov rdx, 100
     syscall
 
     mov rdi, rsi
-    call atoi
+    call convert_to_dec
     mov rbx, rax
 
+    cmp rax, 2
+    jl _error
 
-.find_sqrt:
+_find_sqrt:
     cvtsi2sd xmm0, rbx
     sqrtsd xmm0, xmm0
 
     cvttsd2si rbx, xmm0
 
     mov rdi, rbx
+    inc rdi
     mov rsi, rax
     mov rcx, 2
 
-.is_primary:
+_primary:
     xor rdx, rdx
     mov rax, rsi
     mov rbx, rcx
     div rbx
 
-    cmp rdx, 0
-    jz .error
-
     cmp rcx, rdi
-    jz .success
+    jz _success
+
+    cmp rdx, 0
+    jz _error
 
     inc rcx
-    jmp .is_primary
+    jmp _primary
 
 
-.success:
-    mov rax, sys_exit
+_success:
+    mov rax, 60
     mov rdi, 0
     syscall
 
-.error:
-    mov rax, sys_exit
+_error:
+    mov rax, 60
     mov rdi, 1
     syscall
 
-atoi:
-    call store_value
+convert_to_dec:
+    xor rsi, rsi
+    call string_len
     mov rcx, rax
     xor rax, rax
 
-.atoi_loop:
+_convert_to_dec_loop:
 
     cmp   rsi, rcx
-    jge   .atoi_end
+    jge   _convert_to_dec_end
 
     mov   dl, byte [rdi + rsi]
 
     cmp dl, 10
-    jz .atoi_end
+    jz _convert_to_dec_end
 
     cmp dl, '0'
-    jl .atoi_err
+    jl _convert_to_dec_err
 
     cmp dl, '9'
-    jg .atoi_err
+    jg _convert_to_dec_err
 
     add   rax, rax
     lea   rax, [4 * rax + rax]
@@ -91,29 +88,29 @@ atoi:
     movzx rdx, dl
     add   rax, rdx
 
-.atoi_inc:
+_convert_to_dec_inc:
     inc   rsi
-    jmp   .atoi_loop
+    jmp   _convert_to_dec_loop
 
-.atoi_err:
+_convert_to_dec_err:
     mov rax, -1
     ret
 
-.atoi_end:
+_convert_to_dec_end:
     xor rdx, rdx
     ret
 
 
-store_value:
+string_len:
     xor rax, rax
 
-.store_value_loop:
+_string_len_loop:
 
     cmp [rdi + rax], byte 0
-    jz .store_value_end
+    jz _string_len_end
 
     inc rax
-    jmp .store_value_loop
+    jmp _string_len_loop
 
-.store_value_end:
+_string_len_end:
     ret

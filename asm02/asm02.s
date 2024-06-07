@@ -22,11 +22,16 @@ _start:
     mov rdx, 255
     syscall
 
-
     cmp byte [input], '4'
-    cmp byte [input+1], '2'
-    je equal
     jne not_equal
+
+    cmp byte [input+1], '2'
+    jne not_equal
+
+    cmp byte [input+2], 10
+    jne not_equal
+
+    jmp equal
 
 not_equal:
     mov rax, 60

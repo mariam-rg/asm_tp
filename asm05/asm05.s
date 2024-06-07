@@ -25,9 +25,7 @@ _start:
     call _conv
     mov r10, rax
 
-
     add r11, r10
-
 
     xor rax, rax
     xor rdi, rdi
@@ -36,13 +34,7 @@ _start:
 
     jmp _conv_inv
 
-    jmp _error
-
-
-
-
-
-
+    jmp _success
 
 ; rcx, rdx, rax, r8, rbx
 _conv:
@@ -68,27 +60,24 @@ _conv_loop:
     mul bl
     inc rcx
 
-
     jmp _conv_loop
 
 _conv_end:
     ret
 
-
-
 _conv_inv:
    mov rax, r11
 _loop:
-
-    cmp rax, byte 1
-    jl _affiche
-
     xor rdx, rdx
     mov rbx, 10
     div rbx
     add rdx, 48
     push rdx
-   jmp _loop
+
+    cmp rax, byte 1
+    jl _affiche
+
+    jmp _loop
 
 _affiche:
 _loop_aff:
@@ -106,10 +95,7 @@ _loop_aff:
 
     jmp _loop_aff
 
-
-
 _end:
-
     mov rax, 1
     mov rdi, 1
     mov [tmp], byte 10
@@ -117,7 +103,12 @@ _end:
     mov rdx, 1
     syscall
 
-_error:
+_success:
     mov rax, 60
     mov rdi, 0
+    syscall
+
+_error:
+    mov rax, 60
+    mov rdi, 1
     syscall
