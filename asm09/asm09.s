@@ -2,21 +2,18 @@ section .text
     global _start
 
 _start:
-    ; Lire l'entrée utilisateur
+   
     mov eax, 3
     mov ebx, 0
     mov ecx, buffer
     mov edx, 10
     int 0x80
 
-    ; Convertir en entier
     call atoi
 
-    ; Vérifier si l'option "-b" est demandée
     cmp byte [buffer], '-'
     je binary_convert
 
-    ; Conversion en hexadécimal
     call int_to_hex
     jmp exit
 
@@ -29,7 +26,6 @@ exit:
     xor ebx, ebx
     int 0x80
 
-; Convertit un entier en hexadécimal
 int_to_hex:
     mov ecx, 8
 .hex_loop:
@@ -50,7 +46,6 @@ int_to_hex:
     int 0x80
     ret
 
-; Convertit un entier en binaire
 int_to_bin:
     mov ecx, 32
 .bin_loop:
