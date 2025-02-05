@@ -1,64 +1,142 @@
+sys_stdin   equ 0
+sys_stdout  equ 1
+
+sys_read    equ 0
+sys_write   equ 1
+sys_exit    equ 60
+
+section .data
+    txt db " "
+
 section .text
     global _start
 
 _start:
-    ; Lire l'argument de la ligne de commande
-    mov ebx, 1          ; Compteur i = 1
-    mov ecx, 0          ; Somme totale = 0
+    pop r8
 
-    ; Lire l'entrée utilisateur (nombre donné)
-    mov eax, 3          ; syscall read
-    mov edi, 0          ; stdin
-    mov esi, buffer     ; Stockage de l'entrée utilisateur
-    mov edx, 10        ; Taille du buffer
-    int 0x80
 
-    ; Convertir l'entrée en entier
+    cmp r8, 2
+    jnz .error
+
+    pop rdi
+    pop rdi
+
     call atoi
-    dec eax             ; Car on somme jusqu'à N-1
-    mov edx, eax        ; Stocker N-1
 
-sum_loop:
-    cmp ebx, edx        ; Si i > N-1, terminer
-    jg print_result
-    add ecx, ebx        ; somme += i
-    inc ebx             ; i++
-    jmp sum_loop
 
-print_result:
-    mov eax, ecx        ; Préparer la somme pour affichage
-    call print_int
+    cmp rax, -1
+    jnz .error
 
-    mov eax, 1          ; syscall exit
-    xor ebx, ebx
-    int 0x80
+    mov r9, rax
 
-; Conversion ASCII vers entier
+.convert_to_binary:
+    mov rbx, 2
+
+.convert_to_binary_loop:
+    cmp rax, 1
+    jl .display_binary
+
+
+    div rbx
+    add rdx, byte 48
+
+    push rdx
+    xor rdx, rdx
+
+    jmp .convert_to_binary_loop
+
+.display_binary:
+    pop rdx
+
+    test rdx,rdx
+    jz .display_binary_end
+
+    mov rax, sys_write
+    mov rdi, sys_stdout
+    mov [txt], rdx
+    mov rsi, txt
+    mov rdx, 1
+    syscall
+
+    jmp .display_binary
+
+.display_binary_end:
+
+    mov rax, sys_write
+    mov rdi, sys_stdout
+    mov [txt], byte 10
+    mov rsi, txt
+    mov rdx, 1
+    syscall
+
+
+    jmp .exit_success
+
+.error:
+    mov rax, sys_exit
+    mov rdi, 1
+    syscall
+
+.exit_success:
+    mov rax, sys_exit
+    mov rdi, r10
+    syscall
+
 atoi:
-    xor eax, eax
-    xor ecx, ecx
-.next_digit:
-    movzx edx, byte [esi+ecx]
+    xor rsi, rsi
+    call strlen
+    mov rcx, rax
+    xor rax, rax
+
+.atoi_loop:
+
+    cmp   rsi, rcx
+    jge   .atoi_end
+
+
+    mov   dl, byte [rdi + rsi]
+
+
     cmp dl, 10
-    je .done
-    sub dl, '0'
-    imul eax, eax, 10
-    add eax, edx
-    inc ecx
-    jmp .next_digit
-.done:
+    jz .atoi_end
+
+
+    cmp dl, '0'
+    jl .atoi_err
+
+    cmp dl, '9'
+    jg .atoi_err
+
+    add   rax, rax
+    lea   rax, [4 * rax + rax]
+
+    sub   dl, "0"
+    movzx rdx, dl
+    add   rax, rdx
+
+.atoi_inc:
+    inc   rsi
+    jmp   .atoi_loop
+
+.atoi_err:
+    mov rax, -1
     ret
 
-; Fonction d'affichage d'un entier
-print_int:
-    push eax
-    mov eax, 4
-    mov ebx, 1
-    mov ecx, buffer
-    mov edx, 10
-    int 0x80
-    pop eax
+.atoi_end:
+    xor rdx, rdx
     ret
 
-section .bss
-    buffer resb 10
+
+strlen:
+    xor rax, rax
+
+.strlen_loop:
+
+    cmp [rdi + rax], byte 0
+    jz .strlen_end
+
+    inc rax
+    jmp .strlen_loop
+
+.strlen_end:
+    ret
