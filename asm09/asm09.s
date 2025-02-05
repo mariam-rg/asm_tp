@@ -1,118 +1,76 @@
-section .bss
-    buffer resb 33   ; Buffer pour stocker la sortie binaire ou hexadécimale
-
-section .data
-    usage_msg db "Usage: ./asm09 [-b] <number>", 10, 0
-    newline db 10
-    hex_digits db "0123456789ABCDEF"
-
 section .text
     global _start
 
 _start:
-    mov rax, [rsp]      ; Nombre d'arguments
-    cmp rax, 1
-    jle error_usage     ; Si aucun argument, afficher l'usage
+    ; Lire l'entrée utilisateur
+    mov eax, 3
+    mov ebx, 0
+    mov ecx, buffer
+    mov edx, 10
+    int 0x80
 
-    mov rsi, [rsp+8]    ; Premier argument
-    test rsi, rsi
-    jz error_usage      ; Vérifier si c'est NULL
+    ; Convertir en entier
+    call atoi
 
-    mov rdi, [rsp+16]   ; Deuxième argument s'il existe
-    test rdi, rdi
-    jz parse_decimal    ; S'il n'y a pas de deuxième argument, traiter comme hex
+    ; Vérifier si l'option "-b" est demandée
+    cmp byte [buffer], '-'
+    je binary_convert
 
-    mov rax, [rsi]
-    cmp byte [rax], '-' ; Vérifier le premier caractère
-    jne parse_decimal   ; Pas d'option, traiter comme nombre
-    cmp byte [rax+1], 'b'
-    jne error_usage     ; Mauvaise option
+    ; Conversion en hexadécimal
+    call int_to_hex
+    jmp exit
 
-    mov rsi, rdi        ; Déplacer le nombre en argument principal
-    call parse_decimal
-    call convert_to_binary
-    jmp print_output
+binary_convert:
+    call int_to_bin
+    jmp exit
 
-parse_decimal:
-    xor rbx, rbx       ; rbx contiendra le nombre converti
-.loop:
-    movzx rax, byte [rsi]
-    test rax, rax
-    jz done_parsing
-    cmp rax, '0'
-    jb error_usage
-    cmp rax, '9'
-    ja error_usage
-    sub rax, '0'
-    imul rbx, rbx, 10
-    add rbx, rax
-    inc rsi
-    jmp .loop
+exit:
+    mov eax, 1
+    xor ebx, ebx
+    int 0x80
 
-done_parsing:
-    cmp byte [rsp+8], '-'
-    je convert_to_binary
-    call convert_to_hex
-    jmp print_output
-
-convert_to_hex:
-    mov rcx, 0
-    mov rsi, buffer + 32  ; Fin du buffer
-    mov byte [rsi], 0
-    dec rsi
-.loop:
-    mov rax, rbx
-    and rax, 0xF
-    mov al, [hex_digits + rax]
-    mov [rsi], al
-    shr rbx, 4
-    dec rsi
-    inc rcx
-    test rbx, rbx
-    jnz .loop
-    inc rsi
+; Convertit un entier en hexadécimal
+int_to_hex:
+    mov ecx, 8
+.hex_loop:
+    rol eax, 4
+    mov dl, al
+    and dl, 0xF
+    add dl, '0'
+    cmp dl, '9'
+    jbe .print_hex
+    add dl, 7
+.print_hex:
+    mov [hex_buffer+ecx-1], dl
+    loop .hex_loop
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, hex_buffer
+    mov edx, 8
+    int 0x80
     ret
 
-convert_to_binary:
-    mov rcx, 0
-    mov rsi, buffer + 32
-    mov byte [rsi], 0
-    dec rsi
-.loop:
-    mov rax, rbx
-    and rax, 1
-    add al, '0'
-    mov [rsi], al
-    shr rbx, 1
-    dec rsi
-    inc rcx
-    test rbx, rbx
-    jnz .loop
-    inc rsi
+; Convertit un entier en binaire
+int_to_bin:
+    mov ecx, 32
+.bin_loop:
+    shl eax, 1
+    mov dl, '0'
+    jc .set_one
+    jmp .store
+.set_one:
+    mov dl, '1'
+.store:
+    mov [bin_buffer+ecx-1], dl
+    loop .bin_loop
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, bin_buffer
+    mov edx, 32
+    int 0x80
     ret
 
-print_output:
-    mov rdx, rcx
-    mov rax, 1   ; sys_write
-    mov rdi, 1   ; stdout
-    syscall
-
-    mov rax, 1
-    mov rdi, 1
-    mov rsi, newline
-    mov rdx, 1
-    syscall
-
-    mov rax, 60
-    xor rdi, rdi
-    syscall
-
-error_usage:
-    mov rax, 1
-    mov rdi, 1
-    mov rsi, usage_msg
-    mov rdx, 30
-    syscall
-    mov rax, 60
-    mov rdi, 1
-    syscall
+section .bss
+    buffer resb 10
+    hex_buffer resb 8
+    bin_buffer resb 32
