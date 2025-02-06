@@ -2,8 +2,8 @@ section .data
     newline db 10
 
 section .bss
-    buffer resb 32    ; Buffer for number output
-    tmp resb 1        ; Temporary storage for single character
+    buffer resb 32    ; Buffer for output
+    tmp resb 1        ; Temporary storage
 
 section .text
 global _start
@@ -16,72 +16,28 @@ _start:
     pop rcx         ; Skip program name
     pop r8          ; Get string argument
 
-    ; Calculate string length
+    ; Calculate string length first
     xor r11, r11    ; Clear counter
 
 _count_loop:
     mov al, byte [r8 + r11]  ; Get current character
     test al, al              ; Check for null terminator
-    jz _count_done           ; If null, we're done
+    jz _print_string         ; If null, we're done counting
     inc r11                  ; Increment counter
     jmp _count_loop          ; Continue counting
 
-_count_done:
-    ; Convert length (in r11) to string for output
-    mov rax, r11
-    jmp _conv_inv
-
-_conv_inv:
-    test rax, rax        ; Check if number is 0
-    jnz _start_conv
-
-    ; Handle 0 case
-    mov byte [tmp], '0'
-    mov rax, 1
-    mov rdi, 1
-    mov rsi, tmp
-    mov rdx, 1
-    syscall
-    jmp _print_newline
-
-_start_conv:
-    xor rcx, rcx        ; Initialize counter
-
-_conv_loop:
-    test rax, rax       ; Check if we're done
-    jz _print_digits
-
-    xor rdx, rdx        ; Clear for division
-    mov rbx, 10
-    div rbx             ; Divide by 10
-    add rdx, '0'        ; Convert to ASCII
-    push rdx            ; Save digit
-    inc rcx             ; Increment counter
-    jmp _conv_loop
-
-_print_digits:
-    test rcx, rcx       ; Check if we have digits to print
-    jz _print_newline   ; If not, print newline
-
-    pop rdx             ; Get digit
-    mov [tmp], dl       ; Store in tmp
-    push rcx            ; Save counter
-
-    mov rax, 1          ; sys_write
-    mov rdi, 1          ; stdout
-    mov rsi, tmp        ; buffer
-    mov rdx, 1          ; length
+_print_string:
+    ; Print the string
+    mov rax, 1      ; sys_write
+    mov rdi, 1      ; stdout
+    mov rsi, r8     ; string to print
+    mov rdx, r11    ; length
     syscall
 
-    pop rcx             ; Restore counter
-    dec rcx             ; Decrement counter
-    jmp _print_digits
-
-_print_newline:
-    mov byte [tmp], 10  ; newline character
+    ; Print newline
     mov rax, 1          ; sys_write
     mov rdi, 1          ; stdout
-    mov rsi, tmp        ; buffer
+    mov rsi, newline    ; newline character
     mov rdx, 1          ; length
     syscall
 
