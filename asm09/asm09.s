@@ -39,7 +39,7 @@ convert_binary:
     mov rcx, 64     ; Counter for bits
     mov rbx, rax    ; Save number in rbx
     mov rdi, buffer ; Output buffer
-    
+
 binary_loop:
     mov rax, rbx
     shr rbx, 1      ; Shift right to get next bit
@@ -49,28 +49,28 @@ binary_loop:
     inc rdi
     dec rcx
     jnz binary_loop
-    
+
     ; Print result
     mov rax, 1      ; sys_write
     mov rdi, 1      ; stdout
     mov rsi, buffer ; buffer
     mov rdx, 64     ; length
     syscall
-    
+
     ; Print newline
     mov rax, 1
     mov rdi, 1
     mov rsi, newline
     mov rdx, 1
     syscall
-    
+
     jmp exit_success
 
 convert_hex:
     mov rbx, rax    ; Save number in rbx
     mov rdi, buffer ; Output buffer
     mov rcx, 16     ; Process 16 hex digits
-    
+
 hex_loop:
     mov rax, rbx
     and rax, 0xF    ; Mask to get lowest 4 bits
@@ -80,14 +80,14 @@ hex_loop:
     shr rbx, 4      ; Shift right by 4 for next digit
     dec rcx
     jnz hex_loop
-    
+
     ; Print result
     mov rax, 1      ; sys_write
     mov rdi, 1      ; stdout
     mov rsi, buffer ; buffer
     mov rdx, 16     ; length
     syscall
-    
+
     ; Print newline
     mov rax, 1
     mov rdi, 1
