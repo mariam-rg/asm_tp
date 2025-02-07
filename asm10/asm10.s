@@ -1,151 +1,115 @@
 section .data
-    output_msg db "The largest number is: ", 0
-    newline db 0xa
+    newline db 10
 
 section .bss
-    result resb 10
+    buffer resb 32
 
 section .text
-    global _start
+global _start
 
 _start:
+    pop rcx         ; Get argc
+    cmp rcx, 4      ; Need exactly 4 arguments
+    jne error
 
-    mov eax, [esp + 4]
-    cmp eax, 4
-    jne error_argc
+    pop rcx         ; Skip program name
+    pop rdi         ; First number
+    call atoi
+    mov r12, rax    ; Store first number
 
-    mov ebx, [esp + 8]
-    call string_to_int ; Convert the first string to integer in eax
-    mov esi, eax ; Store the first number in esi
+    pop rdi         ; Second number
+    call atoi
+    mov r13, rax    ; Store second number
 
-    mov ebx, [esp + 12] ; Address of the second number string
-    call string_to_int ; Convert the second string to integer in eax
-    cmp eax, esi ; Compare eax (second number) with esi (first number)
-    jg second_is_larger ; Jump if second number is greater
-    mov eax, esi ; Otherwise, keep the first number in eax
+    pop rdi         ; Third number
+    call atoi
+    mov r14, rax    ; Store third number
 
-second_is_larger:
-    mov edi, eax
+    ; Find maximum
+    mov rax, r12    ; Start with first number
+    cmp rax, r13    ; Compare with second
+    jge check_third
+    mov rax, r13    ; Second is larger
 
-    mov ebx, [esp + 16] ; Address of the third number string
-    call string_to_int ; Convert the third string to integer in eax
-    cmp eax, edi ; Compare eax (third number) with edi (larger of first two)
-    jg third_is_larger ; Jump if third number is greater
-    mov eax, edi ; Otherwise, keep the larger of the first two in eax
+check_third:
+    cmp rax, r14    ; Compare with third
+    jge print_result
+    mov rax, r14    ; Third is larger
 
-third_is_larger:
-    call int_to_string
+print_result:
+    mov rdi, buffer
+    call itoa
 
-    mov eax, 4 ; sys_write
-    mov ebx, 1 ; stdout
-    mov ecx, output_msg
-    mov edx, len output_msg
-    int 80h
+    ; Print number
+    mov rax, 1
+    mov rdi, 1
+    mov rsi, buffer
+    mov rdx, rbx
+    syscall
 
-    mov eax, 4 ; sys_write
-    mov ebx, 1 ; stdout
-    mov ecx, result
-    mov edx, eax ; Length of the result string (null-terminated by int_to_string)
-    int 80h
+    ; Print newline
+    mov rax, 1
+    mov rdi, 1
+    mov rsi, newline
+    mov rdx, 1
+    syscall
 
-    ; Exit program
-    mov eax, 1 ; sys_exit
-    xor ebx, ebx ; Exit code 0
-    int 80h
+    mov rax, 60     ; sys_exit
+    xor rdi, rdi    ; return 0
+    syscall
 
-error_argc:
-    ; Handle incorrect number of arguments (optional)
-    mov eax, 4
-    mov ebx, 2
-    mov ecx, error_msg
-    mov edx, len error_msg
-    int 80h
+error:
+    mov rax, 60     ; sys_exit
+    mov rdi, 1      ; return 1
+    syscall
 
-    mov eax, 1
-    mov ebx, 1
-    int 80h
+; Convert string to integer
+atoi:
+    xor rax, rax
+.loop:
+    movzx rdx, byte [rdi]
+    test dl, dl
+    jz .done
+    sub dl, '0'
+    cmp dl, 9
+    ja error
+    imul rax, 10
+    add rax, rdx
+    inc rdi
+    jmp .loop
+.done:
+    ret
 
+; Convert integer to string
+itoa:
+    mov rsi, buffer
+    add rsi, 31
+    mov byte [rsi], 0
+    mov rbx, 0      ; Length counter
 
+    test rax, rax
+    jnz .loop
 
-
-string_to_int: ; Converts a string to an integer (input: ebx = string address, output: eax = integer)
-    push ebx
-    push ecx
-    push edx
-    push esi
-
-    xor eax, eax ; Initialize the result to 0
-    mov esi, 10 ; Multiplier (10 for decimal conversion)
+    dec rsi
+    mov byte [rsi], '0'
+    inc rbx
+    jmp .done
 
 .loop:
-    mov cl, byte [ebx] ; Get the current character
-    cmp cl, 0 ; Check for null terminator
-    je .end ; If null, exit the loop
+    test rax, rax
+    jz .done
 
-    cmp cl, '0'
-    jl .invalid_char
-    cmp cl, '9'
-    jg .invalid_char
-
-    sub cl, '0' ; Convert char to digit
-    mul esi ; Multiply the current result by 10
-    add eax, ecx ; Add the digit to the result
-
-    inc ebx ; Move to the next character
+    xor rdx, rdx
+    mov rcx, 10
+    div rcx
+    add dl, '0'
+    dec rsi
+    mov [rsi], dl
+    inc rbx
     jmp .loop
 
-.invalid_char:
-    mov eax, -1 ; Or handle the error as you wish.
-    jmp .end
-
-.end:
-    pop esi
-    pop edx
-    pop ecx
-    pop ebx
+.done:
+    mov rdi, buffer
+    mov rcx, rbx
+    rep movsb
     ret
-
-int_to_string: ; Converts an integer (eax) to a string (stored in 'result')
-    push eax
-    push ebx
-    push ecx
-    push edx
-    push esi
-    push edi
-
-    mov esi, result + 9 ; Point to the end of the 'result' buffer (adjust 9 if needed)
-    mov byte [esi], 0 ; Null-terminate the string
-
-    mov ebx, 10 ; Divisor (10 for decimal conversion)
-
-.loop_it:
-    xor edx, edx ; Clear edx for division
-    div ebx ; Divide eax by 10. Remainder in edx, quotient in eax
-    push dx ; Store the remainder (digit) on the stack
-
-    test eax, eax ; Check if the quotient is zero
-    jnz .loop_it ; If not zero, continue the loop
-
-.loop_back:
-    pop dx ; Retrieve the digit from the stack
-    add dl, '0' ; Convert digit to ASCII
-    mov [esi], dl ; Store the ASCII character
-    dec esi ; Move to the next position
-
-    test esp, esp ; Check if the stack is empty
-    jnz .loop_back
-
-    mov eax, result + 10 - esi ; Calculate the length of the string (including null)
-
-    pop edi
-    pop esi
-    pop edx
-    pop ecx
-    pop ebx
-    pop eax
-    ret
-
-section .data
-    error_msg db "Incorrect number of arguments", 0
-    len error_msg equ $-error_msg
-    len output_msg equ $-output_msg
