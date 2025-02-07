@@ -1,21 +1,20 @@
 section .data
     output_msg db "The largest number is: ", 0
-    newline db 0xa ; Newline character
+    newline db 0xa
 
 section .bss
-    result resb 10 ; Reserve space for the result string (adjust size as needed)
+    result resb 10
 
 section .text
     global _start
 
 _start:
-    ; Check if three arguments are provided (including the program name)
-    mov eax, [esp + 4] ; Number of arguments
-    cmp eax, 4
-    jne error_argc ; Jump to error if not 4 arguments
 
-    ; Load the three numbers from the stack (arguments are strings)
-    mov ebx, [esp + 8] ; Address of the first number string
+    mov eax, [esp + 4]
+    cmp eax, 4
+    jne error_argc
+
+    mov ebx, [esp + 8]
     call string_to_int ; Convert the first string to integer in eax
     mov esi, eax ; Store the first number in esi
 
@@ -26,7 +25,7 @@ _start:
     mov eax, esi ; Otherwise, keep the first number in eax
 
 second_is_larger:
-    mov edi, eax  ; Store the larger of the first two in edi
+    mov edi, eax
 
     mov ebx, [esp + 16] ; Address of the third number string
     call string_to_int ; Convert the third string to integer in eax
@@ -35,10 +34,8 @@ second_is_larger:
     mov eax, edi ; Otherwise, keep the larger of the first two in eax
 
 third_is_larger:
-    ; Convert the largest number (in eax) back to a string
     call int_to_string
 
-    ; Display the message and the result
     mov eax, 4 ; sys_write
     mov ebx, 1 ; stdout
     mov ecx, output_msg
@@ -70,7 +67,6 @@ error_argc:
 
 
 
-; --- Subroutines ---
 
 string_to_int: ; Converts a string to an integer (input: ebx = string address, output: eax = integer)
     push ebx
