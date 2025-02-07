@@ -1,137 +1,121 @@
+
+Click to open code
+The program:
+
+Takes a string argument
+Counts vowels (a,e,i,o,u - both cases)
+Prints the count
+Returns 0 on success, 1 on error
+ Copy
+Retry
+
+
+Claude can make mistakes. Please double-check responses.
+
+
+
+Aucun fichier choisi
+
+
+3.5 Haiku
+
+Concise
+1 message
+remaining
+until
+7:00 PM
+Subscribe to Pro
+
+Vowel Counter Assembly Program
+
 section .data
+    vowels db "aeiouAEIOU", 0
     txt db " "
 
 section .text
     global _start
 
 _start:
-    pop r8         ; Get argc
-    dec r8         ; Decrease by 1 to get actual argument count
-    cmp r8, 1      ; Check if we have exactly 1 argument
-    jne _error_input
+    pop r8                 ; Get argc
+    dec r8                 ; Actual argument count
+    cmp r8, 1             ; Check if exactly 1 argument
+    jne _error
 
-    pop rdi        ; Program name
-    pop rdi        ; Argument
+    pop rdi               ; Program name
+    pop rdi               ; Get string argument
 
-    call convert_to_dec
-    cmp rax, -1
-    je _error_input
+    xor r9, r9           ; Vowel counter
+    xor rsi, rsi         ; String index
 
-    cmp rax, 1
-    jle _not_prime
+_count_loop:
+    mov dl, byte [rdi + rsi]
+    test dl, dl
+    jz _print_result     ; End of string
 
-    mov rcx, 2
-    mov r9, rax    ; Store original number
+    mov rbx, vowels      ; Reset vowels pointer
+_check_vowel:
+    mov cl, byte [rbx]
+    test cl, cl
+    jz _next_char        ; Not a vowel
 
-_check_prime:
+    cmp dl, cl
+    je _found_vowel
+
+    inc rbx
+    jmp _check_vowel
+
+_found_vowel:
+    inc r9
+
+_next_char:
+    inc rsi
+    jmp _count_loop
+
+_print_result:
     mov rax, r9
-    xor rdx, rdx
-    div rcx
-    
-    cmp rdx, 0     ; Check if divisible
-    je _not_prime
-    
-    inc rcx
-    mov rax, rcx
-    mul rax        ; rcx * rcx
-    cmp rax, r9    ; Compare with original number
-    jle _check_prime
+    xor rcx, rcx         ; Digit counter
 
-_is_prime:
-    mov rax, r9
-    call _print_number
-    mov rax, 60
-    xor rdi, rdi   ; Exit 0 for prime
-    syscall
-
-_not_prime:
-    mov rax, r9
-    call _print_number
-    mov rax, 60
-    mov rdi, 1     ; Exit 1 for non-prime
-    syscall
-
-_print_number:
-    push rax       ; Save number
-    xor rcx, rcx
-
-_push_number_loop:
+_convert_loop:
     xor rdx, rdx
     mov rbx, 10
     div rbx
-    add rdx, '0'
+    add rdx, '0'         ; Convert to ASCII
     push rdx
     inc rcx
     test rax, rax
-    jnz _push_number_loop
+    jnz _convert_loop
 
-_display_numbers:
+_print_loop:
     test rcx, rcx
-    jz _print_number_end
+    jz _print_newline
+    
     pop rdx
     mov [txt], dl
     push rcx
-    mov rax, 1
-    mov rdi, 1
-    mov rsi, txt
-    mov rdx, 1
+    
+    mov rax, 1          ; sys_write
+    mov rdi, 1          ; stdout
+    mov rsi, txt        ; buffer
+    mov rdx, 1          ; length
     syscall
+    
     pop rcx
     dec rcx
-    jmp _display_numbers
+    jmp _print_loop
 
-_print_number_end:
-    mov byte [txt], 10
+_print_newline:
+    mov byte [txt], 10   ; newline
     mov rax, 1
     mov rdi, 1
     mov rsi, txt
     mov rdx, 1
     syscall
-    pop rax        ; Restore number
-    ret
 
-_error_input:
-    mov rax, 60
-    mov rdi, 2     ; Exit 2 for bad input
+    mov rax, 60         ; sys_exit
+    xor rdi, rdi        ; status 0
     syscall
 
-convert_to_dec:
-    xor rsi, rsi
-    call string_len
-    mov rcx, rax
-    xor rax, rax
-
-_convert_to_dec_loop:
-    cmp rsi, rcx
-    jge _convert_to_dec_end
-    mov dl, byte [rdi + rsi]
-    cmp dl, 10
-    jz _convert_to_dec_end
-    cmp dl, '0'
-    jl _convert_to_dec_err
-    cmp dl, '9'
-    jg _convert_to_dec_err
-    add rax, rax
-    lea rax, [4 * rax + rax]
-    sub dl, '0'
-    movzx rdx, dl
-    add rax, rdx
-    inc rsi
-    jmp _convert_to_dec_loop
-
-_convert_to_dec_err:
-    mov rax, -1
-    ret
-
-_convert_to_dec_end:
-    ret
-
-string_len:
-    xor rax, rax
-_string_len_loop:
-    cmp byte [rdi + rax], 0
-    jz _string_len_end
-    inc rax
-    jmp _string_len_loop
-_string_len_end:
-    ret
+_error:
+    mov rax, 60         ; sys_exit
+    mov rdi, 1          ; status 1
+    syscall
