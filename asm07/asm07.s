@@ -29,7 +29,7 @@ _check_prime:
     div rcx
 
     cmp rdx, 0     ; Check if divisible
-    je _not_prime
+    je _print_and_exit_nonprime
 
     inc rcx
     mov rax, rcx
@@ -37,13 +37,25 @@ _check_prime:
     cmp rax, r9    ; Compare with original number
     jle _check_prime
 
-_is_prime:
     mov rax, r9
-    jmp _print_number
+    jmp _print_and_exit_prime
+
+_print_and_exit_prime:
+    call _print_number
+    mov rax, 60
+    xor rdi, rdi   ; Exit code 0 for prime
+    syscall
+
+_print_and_exit_nonprime:
+    call _print_number
+    mov rax, 60
+    mov rdi, 1     ; Exit code 1 for non-prime
+    syscall
 
 _not_prime:
+    call _print_number
     mov rax, 60
-    mov rdi, 0
+    mov rdi, 1     ; Exit code 1 for non-prime
     syscall
 
 _print_number:
@@ -86,14 +98,11 @@ _print_number_end:
     mov rsi, txt
     mov rdx, 1
     syscall
-
-    mov rax, 60
-    mov rdi, 0
-    syscall
+    ret
 
 _error_input:
     mov rax, 60
-    mov rdi, 2             ; Exit code 2 for bad input
+    mov rdi, 2     ; Exit code 2 for bad input
     syscall
 
 convert_to_dec:
