@@ -7,40 +7,47 @@ section .text
 _start:
     pop r8
     cmp r8, 2
-    jnz _error
+    jne _error_input
 
     pop rdi
     pop rdi
 
     call convert_to_dec
 
-
     cmp rax, -1
-    jz _error
+    je _error_input
 
-    cmp rax, 0
-    jl _error
+    cmp rax, 1
+    jle _not_prime
 
-    cmp rax, 0
-    jz _print_0
+    mov rcx, 2
+    mov r9, rax    ; Store original number
 
-    dec rax
-    mov rcx, rax
-    dec rcx
+_check_prime:
+    mov rax, r9
+    xor rdx, rdx
+    div rcx
 
-_loop:
-    cmp rcx, 1
-    jl _print_number
+    cmp rdx, 0     ; Check if divisible
+    je _not_prime
 
-    add rax, rcx
-    dec rcx
+    inc rcx
+    mov rax, rcx
+    mul rax        ; rcx * rcx
+    cmp rax, r9    ; Compare with original number
+    jle _check_prime
 
-    jmp _loop
+_is_prime:
+    mov rax, r9
+    jmp _print_number
 
-_print_0:
-    mov rax, 0
+_not_prime:
+    mov rax, 60
+    mov rdi, 0
+    syscall
 
 _print_number:
+    xor rcx, rcx   ; Counter for digits
 
 _push_number_loop:
     xor rdx, rdx
@@ -49,48 +56,44 @@ _push_number_loop:
 
     add rdx, '0'
     push rdx
+    inc rcx        ; Track number of digits
 
-    cmp rax, 1
-    jl _display_numbers
-
-    jmp _push_number_loop
+    test rax, rax
+    jnz _push_number_loop
 
 _display_numbers:
-    pop rdx
-
-    test rdx, rdx
+    test rcx, rcx
     jz _print_number_end
 
+    pop rdx
+    mov [txt], dl
 
+    push rcx
     mov rax, 1
     mov rdi, 1
-    mov [txt], rdx
     mov rsi, txt
     mov rdx, 1
     syscall
+    pop rcx
 
+    dec rcx
     jmp _display_numbers
 
 _print_number_end:
-
-
+    mov byte [txt], 10    ; Newline
     mov rax, 1
     mov rdi, 1
-    mov [txt], byte 10
     mov rsi, txt
     mov rdx, 1
     syscall
 
-    xor rcx, rcx
-
-_success:
     mov rax, 60
     mov rdi, 0
     syscall
 
-_error:
+_error_input:
     mov rax, 60
-    mov rdi, 1
+    mov rdi, 2             ; Exit code 2 for bad input
     syscall
 
 convert_to_dec:
@@ -100,11 +103,10 @@ convert_to_dec:
     xor rax, rax
 
 _convert_to_dec_loop:
+    cmp rsi, rcx
+    jge _convert_to_dec_end
 
-    cmp   rsi, rcx
-    jge   _convert_to_dec_end
-
-    mov   dl, byte [rdi + rsi]
+    mov dl, byte [rdi + rsi]
 
     cmp dl, 10
     jz _convert_to_dec_end
@@ -115,34 +117,29 @@ _convert_to_dec_loop:
     cmp dl, '9'
     jg _convert_to_dec_err
 
-    add   rax, rax
-    lea   rax, [4 * rax + rax]
+    add rax, rax
+    lea rax, [4 * rax + rax]
 
-    sub   dl, "0"
+    sub dl, '0'
     movzx rdx, dl
-    add   rax, rdx
+    add rax, rdx
 
-_convert_to_dec_inc:
-    inc   rsi
-    jmp   _convert_to_dec_loop
+    inc rsi
+    jmp _convert_to_dec_loop
 
 _convert_to_dec_err:
     mov rax, -1
     ret
 
 _convert_to_dec_end:
-    xor rdx, rdx
     ret
-
 
 string_len:
     xor rax, rax
 
 _string_len_loop:
-
-    cmp [rdi + rax], byte 0
+    cmp byte [rdi + rax], 0
     jz _string_len_end
-
     inc rax
     jmp _string_len_loop
 
