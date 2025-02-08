@@ -71,4 +71,5 @@ _error:
 
 _exit:
     mov rax, 60         ; sys_exit
+    mov rdi, 2          ; return 2 for invalid input
     syscall
