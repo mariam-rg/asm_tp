@@ -1,52 +1,72 @@
 section .data
-    buffer db 20 dup(0)
+
+global _start
+
+section .bss
+    input resb 64
 
 section .text
-    global _start
 
 _start:
-    ; Read input
-    mov rax, 0          ; sys_read
-    mov rdi, 0          ; stdin
-    mov rsi, buffer     ; buffer
-    mov rdx, 20         ; size
+    mov rax, 0
+    mov rdi, 0
+    mov rsi, input
+    mov rdx, 64
     syscall
 
-    ; Convert string to number
-    xor rax, rax        ; Clear accumulator
-    mov rcx, buffer     ; Point to buffer
 
-_convert:
-    movzx rdx, byte [rcx]   ; Get current character
-    cmp dl, 10              ; Check for newline
-    je _check_even
-    cmp dl, '0'            ; Check if less than '0'
-    jl _error
-    cmp dl, '9'            ; Check if greater than '9'
-    jg _error
-    
-    sub dl, '0'            ; Convert ASCII to number
-    imul rax, 10           ; Multiply current number by 10
-    add rax, rdx           ; Add new digit
-    inc rcx                ; Move to next character
-    jmp _convert
+    mov r8, rsi
+    call _conv
 
-_check_even:
-    test rax, 1            ; Test least significant bit
-    jz _even               ; If bit is 0, number is even
-    jmp _odd               ; If bit is 1, number is odd
+    mov rbx, 2
+    xor rdx, rdx
+    div rbx
+    cmp rdx, 0
+    je _pair
+    jne _notpair
 
-_even:
-    xor rdi, rdi           ; Exit code 0
-    jmp _exit
+; rcx, rdx, rax, r8, rbx
+_conv:
+    xor rax,rax
+    xor rcx, rcx
+    xor dl, dl
+    xor rdx, rdx
 
-_odd:
-    mov rdi, 1             ; Exit code 1
-    jmp _exit
 
-_error:
-    mov rdi, 1             ; Exit with error code 1
 
-_exit:
-    mov rax, 60            ; sys_exit
+_conv_loop:
+
+    mov dl, [r8+rcx]
+
+    cmp dl, byte 0
+    je _conv_end
+    cmp dl, 10
+    je _conv_end
+
+    sub dl, 48
+    add al, dl
+
+    cmp [r8+rcx+1], byte 0
+    je _conv_end
+    cmp [r8+rcx+1], byte 10
+    je _conv_end
+
+    mov bl, 10
+    mul bl
+    inc rcx
+    jmp _conv_loop
+
+_conv_end:
+    mov rdi, 2
+
+_pair:
+    mov rax, 60
+    mov rdi, 0
     syscall
+
+
+_notpair:
+    mov rax, 60
+    mov rdi, 1
+    syscall
+
