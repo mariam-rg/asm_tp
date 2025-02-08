@@ -67,9 +67,9 @@ _not_prime:
     jmp _exit
 
 _error:
-    mov rdi, 1          ; Return 1 for error
+    mov rax, 60         ; sys_exit
+    mov rdi, 2          ; return 2 for invalid input
 
 _exit:
     mov rax, 60         ; sys_exit
-    mov rdi, 2          ; return 2 for invalid input
     syscall
