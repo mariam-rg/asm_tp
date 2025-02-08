@@ -1,72 +1,69 @@
 section .data
 
-global _start
-
 section .bss
     input resb 64
 
 section .text
+    global _start
 
 _start:
-    mov rax, 0
-    mov rdi, 0
+    ; Read input
+    mov rax, 0          ; sys_read
+    mov rdi, 0          ; stdin
     mov rsi, input
     mov rdx, 64
     syscall
 
-
-    mov r8, rsi
-    call _conv
-
-    mov rbx, 2
-    xor rdx, rdx
-    div rbx
-    cmp rdx, 0
-    je _pair
-    jne _notpair
-
-; rcx, rdx, rax, r8, rbx
-_conv:
-    xor rax,rax
-    xor rcx, rcx
-    xor dl, dl
-    xor rdx, rdx
-
-
+    ; Initialize conversion
+    mov r8, input
+    xor rax, rax        ; Clear result
+    xor rcx, rcx        ; Clear counter
 
 _conv_loop:
-
-    mov dl, [r8+rcx]
-
-    cmp dl, byte 0
-    je _conv_end
-    cmp dl, 10
-    je _conv_end
-
-    sub dl, 48
-    add al, dl
-
-    cmp [r8+rcx+1], byte 0
-    je _conv_end
-    cmp [r8+rcx+1], byte 10
-    je _conv_end
-
-    mov bl, 10
-    mul bl
+    movzx rdx, byte [r8 + rcx]   ; Load character
+    
+    ; Check for end of input
+    cmp dl, 10          ; newline
+    je _check_number
+    cmp dl, 0           ; null terminator
+    je _check_number
+    
+    ; Validate digit
+    cmp dl, '0'
+    jl _error
+    cmp dl, '9'
+    jg _error
+    
+    ; Convert and accumulate
+    sub dl, '0'         ; Convert to number
+    mov rbx, rax        ; Save current number
+    imul rax, 10        ; Multiply by 10
+    add rax, rdx        ; Add new digit
+    
     inc rcx
     jmp _conv_loop
 
-_conv_end:
-    mov rdi, 2
+_check_number:
+    ; If no digits were processed, error
+    test rcx, rcx
+    jz _error
 
-_pair:
-    mov rax, 60
-    mov rdi, 0
+    ; Check if even/odd
+    test rax, 1         ; Test least significant bit
+    jz _even           ; If zero, number is even
+    jmp _odd           ; Otherwise, odd
+
+_even:
+    mov rax, 60         ; sys_exit
+    xor rdi, rdi        ; return 0
     syscall
 
-
-_notpair:
-    mov rax, 60
-    mov rdi, 1
+_odd:
+    mov rax, 60         ; sys_exit
+    mov rdi, 1          ; return 1
     syscall
 
+_error:
+    mov rax, 60         ; sys_exit
+    mov rdi, 2          ; return 2 for invalid input
+    syscall
