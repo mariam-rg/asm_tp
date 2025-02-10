@@ -16,7 +16,7 @@ _start:
     ; Store length and adjust for newline
     dec rax                 ; Remove newline from count
     mov qword [len], rax    ; Store length
-    
+
     ; Set up for printing in reverse
     mov rsi, buffer         ; Start of buffer
     add rsi, rax            ; Point to last character (before newline)
