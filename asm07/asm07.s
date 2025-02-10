@@ -15,23 +15,39 @@ _start:
     ; Convert string to number
     xor rax, rax        ; Clear rax
     mov rcx, buffer     ; Point to buffer
+    xor r9, r9          ; Clear sign flag
+
+    ; Check for negative sign
+    movzx rdx, byte [rcx]
+    cmp dl, '-'
+    jne _convert
+    mov r9, 1          ; Set negative flag
+    inc rcx            ; Move past the minus sign
+
 _convert:
     movzx rdx, byte [rcx]
     cmp dl, 10          ; Check for newline
-    je _check_prime
+    je _process_number
     cmp dl, '0'
     jl _error
     cmp dl, '9'
     jg _error
-
+    
     sub dl, '0'         ; Convert to number
     imul rax, 10        ; Multiply by 10
     add rax, rdx        ; Add digit
     inc rcx
     jmp _convert
 
+_process_number:
+    ; If number was negative, make it positive
+    test r9, r9
+    jz _check_prime
+    neg rax
+
 _check_prime:
-    cmp rax, 1          ; 1 is not prime
+    ; For negative numbers or 1, not prime
+    cmp rax, 1
     jle _not_prime
 
     mov rcx, 2          ; Start checking from 2
@@ -42,7 +58,7 @@ _loop:
     pop rax
     cmp rdx, 0          ; Check remainder
     je _check_if_same
-
+    
     inc rcx
     push rax
     mov rdx, 0
@@ -67,8 +83,7 @@ _not_prime:
     jmp _exit
 
 _error:
-    mov rax, 60         ; sys_exit
-    mov rdi, 2          ; return 2 for invalid input
+    mov rdi, 2          ; Return 2 for invalid input
 
 _exit:
     mov rax, 60         ; sys_exit
