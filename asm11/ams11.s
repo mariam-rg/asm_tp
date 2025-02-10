@@ -1,6 +1,6 @@
 section .data
-    vowels db "aeiouAEIOU", 0   ; List of vowels to check against
-    buffer db 100 dup(0)         ; Input buffer
+    vowels db "aeiouAEIOU", 0
+    buffer db 100 dup(0)
 
 section .text
     global _start
