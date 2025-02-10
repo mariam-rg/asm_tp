@@ -84,11 +84,11 @@ _print_digits:
     jmp _print_digits
 
 _print_newline:
-    push 10                 ; Newline character
-    mov rax, 1              ; sys_write
-    mov rdi, 1              ; stdout
-    mov rsi, rsp            ; Point to newline
-    mov rdx, 1              ; Length 1
+    push 10
+    mov rax, 1
+    mov rdi, 1
+    mov rsi, rsp
+    mov rdx, 1
     syscall
-    pop rax                 ; Clean up newline
+    pop rax
     ret
