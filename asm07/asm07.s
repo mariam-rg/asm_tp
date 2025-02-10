@@ -1,89 +1,73 @@
-section .data
-    buffer db 20 dup(0)
-
 section .text
     global _start
 
 _start:
-    ; Read input
-    mov rax, 0          ; sys_read
-    mov rdi, 0          ; stdin
-    mov rsi, buffer     ; buffer
-    mov rdx, 20         ; size
-    syscall
+    pop r8          ; Get argc
+    cmp r8, 4       ; Need exactly 3 parameters (prog_name + 3 args)
+    jne _error
 
-    ; Convert string to number
-    xor rax, rax        ; Clear rax
-    mov rcx, buffer     ; Point to buffer
-    xor r9, r9          ; Clear sign flag
+    pop rdi         ; Skip program name
+    pop rdi         ; Get first number string
+    call _atoi
+    mov r9, rax     ; Store first number in r9
 
+    pop rdi         ; Get second number string
+    call _atoi
+    cmp rax, r9     ; Compare with first number
+    jne _not_same
+
+    pop rdi         ; Get third number string
+    call _atoi
+    cmp rax, r9     ; Compare with first number
+    jne _not_same
+
+    jmp _all_same   ; If we get here, all numbers are same
+
+_atoi:
+    xor rax, rax        ; Clear result
+    xor rcx, rcx        ; Clear index
+    mov r10b, 0         ; Clear negative flag
+    
     ; Check for negative sign
-    movzx rdx, byte [rcx]
-    cmp dl, '-'
-    jne _convert
-    mov r9, 1          ; Set negative flag
-    inc rcx            ; Move past the minus sign
+    cmp byte [rdi], '-'
+    jne .loop
+    inc rdi             ; Skip minus sign
+    mov r10b, 1         ; Set negative flag
 
-_convert:
-    movzx rdx, byte [rcx]
-    cmp dl, 10          ; Check for newline
-    je _process_number
+.loop:
+    movzx rdx, byte [rdi + rcx]
+    test dl, dl         ; Check for end of string
+    jz .done
+    
     cmp dl, '0'
     jl _error
     cmp dl, '9'
     jg _error
     
-    sub dl, '0'         ; Convert to number
-    imul rax, 10        ; Multiply by 10
-    add rax, rdx        ; Add digit
+    sub dl, '0'
+    imul rax, 10
+    add rax, rdx
     inc rcx
-    jmp _convert
+    jmp .loop
 
-_process_number:
-    ; If number was negative, make it positive
-    test r9, r9
-    jz _check_prime
-    neg rax
+.done:
+    test r10b, r10b     ; Check if number was negative
+    jz .return
+    neg rax             ; Make number negative
 
-_check_prime:
-    ; For negative numbers or 1, not prime
-    cmp rax, 1
-    jle _not_prime
+.return:
+    ret
 
-    mov rcx, 2          ; Start checking from 2
-_loop:
-    mov rdx, 0
-    push rax
-    div rcx
-    pop rax
-    cmp rdx, 0          ; Check remainder
-    je _check_if_same
-    
-    inc rcx
-    push rax
-    mov rdx, 0
-    mov rax, rcx
-    mul rcx             ; rcx * rcx
-    cmp rax, qword [rsp]
-    pop rax
-    jle _loop
-    jmp _is_prime
-
-_check_if_same:
-    cmp rcx, rax        ; If n/2 == n, it's prime
-    je _is_prime
-    jmp _not_prime
-
-_is_prime:
-    mov rdi, 0          ; Return 0
+_all_same:
+    xor rdi, rdi        ; Return 0
     jmp _exit
 
-_not_prime:
+_not_same:
     mov rdi, 1          ; Return 1
     jmp _exit
 
 _error:
-    mov rdi, 2          ; Return 2 for invalid input
+    mov rdi, 2          ; Return 2 for error
 
 _exit:
     mov rax, 60         ; sys_exit
