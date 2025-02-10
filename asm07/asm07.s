@@ -69,7 +69,7 @@ _not_prime:
 _error:
     mov rax, 60         ; sys_exit
     mov rdi, 2          ; return 2 for invalid input
-    syscall          ; Return 1 for error
+    syscall
 
 _exit:
     mov rax, 60         ; sys_exit
