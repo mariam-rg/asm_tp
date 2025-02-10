@@ -1,115 +1,132 @@
 section .data
-    newline db 10
-
-section .bss
-    buffer resb 32
+    buffer db 20 dup(0)
 
 section .text
-global _start
+    global _start
 
 _start:
-    pop rcx         ; Get argc
-    cmp rcx, 4      ; Need exactly 4 arguments
-    jne error
+    pop r8          ; Get argc
+    cmp r8, 4       ; Need exactly 3 parameters (prog_name + 3 args)
+    jne _error
 
-    pop rcx         ; Skip program name
-    pop rdi         ; First number
-    call atoi
-    mov r12, rax    ; Store first number
+    pop rdi         ; Skip program name
+    pop rdi         ; Get first number string
+    call _atoi
+    mov r9, rax     ; Store first number in r9 (current max)
 
-    pop rdi         ; Second number
-    call atoi
-    mov r13, rax    ; Store second number
+    pop rdi         ; Get second number
+    call _atoi
+    cmp rax, r9     ; Compare with current max
+    jle _check_third
+    mov r9, rax     ; Update max if larger
 
-    pop rdi         ; Third number
-    call atoi
-    mov r14, rax    ; Store third number
+_check_third:
+    pop rdi         ; Get third number
+    call _atoi
+    cmp rax, r9     ; Compare with current max
+    jle _print_result
+    mov r9, rax     ; Update max if larger
 
-    ; Find maximum
-    mov rax, r12    ; Start with first number
-    cmp rax, r13    ; Compare with second
-    jge check_third
-    mov rax, r13    ; Second is larger
+_print_result:
+    mov rax, r9     ; Move max number to rax for printing
+    call _print_number
+    xor rdi, rdi    ; Exit code 0
+    jmp _exit
 
-check_third:
-    cmp rax, r14    ; Compare with third
-    jge print_result
-    mov rax, r14    ; Third is larger
+_atoi:
+    xor rax, rax        ; Clear result
+    xor rcx, rcx        ; Clear index
+    mov r10b, 0         ; Clear negative flag
+    
+    ; Check for negative sign
+    cmp byte [rdi], '-'
+    jne .loop
+    inc rdi             ; Skip minus sign
+    mov r10b, 1         ; Set negative flag
 
-print_result:
-    mov rdi, buffer
-    call itoa
-
-    ; Print number
-    mov rax, 1
-    mov rdi, 1
-    mov rsi, buffer
-    mov rdx, rbx
-    syscall
-
-    ; Print newline
-    mov rax, 1
-    mov rdi, 1
-    mov rsi, newline
-    mov rdx, 1
-    syscall
-
-    mov rax, 60     ; sys_exit
-    xor rdi, rdi    ; return 0
-    syscall
-
-error:
-    mov rax, 60     ; sys_exit
-    mov rdi, 1      ; return 1
-    syscall
-
-; Convert string to integer
-atoi:
-    xor rax, rax
 .loop:
-    movzx rdx, byte [rdi]
-    test dl, dl
+    movzx rdx, byte [rdi + rcx]
+    test dl, dl         ; Check for end of string
     jz .done
+    
+    cmp dl, '0'
+    jl _error
+    cmp dl, '9'
+    jg _error
+    
     sub dl, '0'
-    cmp dl, 9
-    ja error
     imul rax, 10
     add rax, rdx
-    inc rdi
+    inc rcx
     jmp .loop
+
 .done:
+    test r10b, r10b     ; Check if number was negative
+    jz .return
+    neg rax             ; Make number negative
+
+.return:
     ret
 
-; Convert integer to string
-itoa:
+_print_number:
+    mov r10, rax        ; Save original number
+    xor rcx, rcx        ; Digit counter
+    test rax, rax
+    jns .convert        ; If positive, start converting
+    neg rax             ; Make positive
+    push rax            ; Save number
+    mov rax, 1          ; sys_write
+    mov rdi, 1          ; stdout
+    push '-'            ; Print minus sign
+    mov rsi, rsp        ; Point to minus sign
+    mov rdx, 1          ; Length 1
+    syscall
+    pop rdx             ; Remove minus sign
+    pop rax             ; Restore number
+
+.convert:
+    mov rbx, 10
+    xor rcx, rcx        ; Clear digit counter
+
+.divide_loop:
+    xor rdx, rdx        ; Clear remainder
+    div rbx             ; Divide by 10
+    add dl, '0'         ; Convert to ASCII
+    push rdx            ; Save digit
+    inc rcx             ; Count digits
+    test rax, rax       ; Check if more digits
+    jnz .divide_loop
+
+.print_loop:
+    test rcx, rcx       ; Check if more digits
+    jz .print_newline
+    
+    pop rdx             ; Get digit
+    mov [buffer], dl    ; Store in buffer
+    push rcx            ; Save counter
+    
+    mov rax, 1          ; sys_write
+    mov rdi, 1          ; stdout
+    mov rsi, buffer     ; buffer
+    mov rdx, 1          ; length
+    syscall
+    
+    pop rcx             ; Restore counter
+    dec rcx             ; Decrement counter
+    jmp .print_loop
+
+.print_newline:
+    mov byte [buffer], 10    ; newline
+    mov rax, 1
+    mov rdi, 1
     mov rsi, buffer
-    add rsi, 31
-    mov byte [rsi], 0
-    mov rbx, 0      ; Length counter
-
-    test rax, rax
-    jnz .loop
-
-    dec rsi
-    mov byte [rsi], '0'
-    inc rbx
-    jmp .done
-
-.loop:
-    test rax, rax
-    jz .done
-
-    xor rdx, rdx
-    mov rcx, 10
-    div rcx
-    add dl, '0'
-    dec rsi
-    mov [rsi], dl
-    inc rbx
-    jmp .loop
-
-.done:
-    mov rdi, buffer
-    mov rcx, rbx
-    rep movsb
+    mov rdx, 1
+    syscall
     ret
+
+_error:
+    mov rdi, 1          ; Exit code 1
+
+_exit:
+    mov rax, 60         ; sys_exit
+    syscall
