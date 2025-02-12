@@ -17,19 +17,19 @@ _start:
     pop rax         ; Skip program name
     pop rdi         ; Get number argument
     call atoi       ; Convert string to integer
-    
+
     ; Check if number is less than 0
     cmp rax, 0
     jl error
-    
+
     ; Save the original number for later
     mov rbx, rax
-    
+
     ; Calculate sum of numbers from 1 to n-1
     dec rax         ; Subtract 1 to get upper limit
     cmp rax, 0      ; Check if result is negative
     jl zero_result
-    
+
     ; Calculate sum using: (n * (n + 1)) / 2
     mov rcx, rax    ; Save n
     inc rax         ; n + 1
@@ -44,21 +44,21 @@ print_result:
     ; Convert result to string
     mov rdi, buffer
     call itoa
-    
+
     ; Print the result
     mov rax, 1      ; sys_write
     mov rdi, 1      ; stdout
     mov rsi, buffer
     mov rdx, rcx    ; Length of string (set by itoa)
     syscall
-    
+
     ; Print newline
     mov rax, 1
     mov rdi, 1
     mov rsi, newline
     mov rdx, 1
     syscall
-    
+
     jmp exit_success
 
 ; Function to convert string to integer (atoi)
@@ -89,7 +89,7 @@ itoa:
     add rsi, 31         ; Point to last character
     mov byte [rsi], 0   ; Null terminate
     mov rcx, 0          ; Character counter
-    
+
     ; Handle 0 specially
     test rax, rax
     jnz itoa_loop
@@ -101,7 +101,7 @@ itoa:
 itoa_loop:
     test rax, rax
     jz itoa_done
-    
+
     xor rdx, rdx
     mov rbx, 10
     div rbx             ; Divide by 10

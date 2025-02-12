@@ -21,25 +21,25 @@ _start:
 
 _conv_loop:
     movzx rdx, byte [r8 + rcx]   ; Load character
-    
+
     ; Check for end of input
     cmp dl, 10          ; newline
     je _check_number
     cmp dl, 0           ; null terminator
     je _check_number
-    
+
     ; Validate digit
     cmp dl, '0'
     jl _error
     cmp dl, '9'
     jg _error
-    
+
     ; Convert and accumulate
     sub dl, '0'         ; Convert to number
     mov rbx, rax        ; Save current number
     imul rax, 10        ; Multiply by 10
     add rax, rdx        ; Add new digit
-    
+
     inc rcx
     jmp _conv_loop
 
