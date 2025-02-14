@@ -1,74 +1,72 @@
-section .bss
-    header: resb 16         ; Buffer for ELF header (first 16 bytes)
-
 section .data
-    elf_magic: db 0x7F, "ELF"  ; ELF magic numbers
-    x86_64_machine: equ 0x3E   ; Machine type for x86-64
+    elf_magic db 0x7f, "ELF"    ; ELF magic numbers
 
-section .text
+section .bss
+    buffer resb 16
+
+section .test
     global _start
 
 _start:
-    ; Check if we have exactly one argument
-    pop rdi                 ; Get argc
-    cmp rdi, 2             ; Should be 2 (program name + filepath)
-    jne not_elf            ; If not 2 arguments, exit with error
+    ; Get argc
+    pop rdi
+    cmp rdi, 2                  ; Check if we have exactly one argument
+    jne _not_elf
 
-    ; Get filepath pointer (skip program name)
-    pop rdi                ; Skip program name
-    pop rdi                ; Get filepath pointer
+    ; Get argv
+    pop rdi                     ; Skip program name
+    pop rsi                     ; Get file path into rsi
 
     ; Open file
-    mov rax, 2            ; sys_open
-    xor rsi, rsi          ; O_RDONLY
-    syscall
+    call _open
+    cmp rax, 0                 ; Check if open succeeded
+    jl _not_elf
 
-    ; Check if file opened successfully
-    cmp rax, 0
-    jl not_elf            ; Exit if error (negative value)
+    ; Read file
+    call _read
+    cmp rax, 16                ; Check if we read 16 bytes
+    jne _not_elf
 
-    ; Save file descriptor
-    mov r8, rax           ; Store fd in r8
-
-    ; Read first 16 bytes (ELF header)
-    mov rax, 0            ; sys_read
-    mov rdi, r8           ; fd
-    mov rsi, header       ; buffer
-    mov rdx, 16           ; count
-    syscall
-
-    ; Check if read was successful
-    cmp rax, 16
-    jne close_and_not_elf ; If couldn't read 16 bytes, not an ELF
-
-    ; Check ELF magic numbers (0x7F 'E' 'L' 'F')
-    mov rsi, header
+    ; Check ELF magic numbers
+    mov rsi, buffer
     mov rdi, elf_magic
-    mov rcx, 4            ; Compare 4 bytes
+    mov rcx, 4
     repe cmpsb
-    jne close_and_not_elf ; If not equal, not an ELF
+    jne _not_elf
 
-    ; Check machine type (x86-64 = 0x3E at offset 18)
-    mov al, byte [header + 0x12]  ; e_machine field
-    cmp al, x86_64_machine
-    jne close_and_not_elf
+    ; Check machine type (x86-64 = 0x3E)
+    mov al, byte [buffer + 0x12]
+    cmp al, 0x3E
+    jne _not_elf
 
-    ; Close file and exit success
-    mov rax, 3            ; sys_close
-    mov rdi, r8           ; fd
+    ; Success - is ELF x86-64
+    call _close
+    xor rdi, rdi               ; Exit code 0
+    jmp _exit
+
+_not_elf:
+    call _close
+    mov rdi, 1                 ; Exit code 1
+
+_exit:
+    mov rax, 60                ; sys_exit
     syscall
-    xor rdi, rdi          ; Exit code 0
-    jmp exit
 
-close_and_not_elf:
-    ; Close file
-    mov rax, 3            ; sys_close
-    mov rdi, r8           ; fd
+
+
+_open:
+    mov rax,2
+    mov rdi, rsi
+    mov rsi, 0
     syscall
 
-not_elf:
-    mov rdi, 1            ; Exit code 1
+_read:
+    mov rdi, rax
+    mov rax,0
+    mov rsi, buffer
+    mov rdx, 16
+    syscall
 
-exit:
-    mov rax, 60           ; sys_exit
+_close:
+    mov rax,3
     syscall
