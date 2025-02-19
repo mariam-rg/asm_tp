@@ -1,106 +1,104 @@
 section .data
-    pattern db '1337', 10      ; Pattern to search for (including newline)
-    replace db 'H4CK', 10      ; Replacement string (including newline)
-    len equ 5                  ; Length of pattern/replace (including newline)
+    pattern: db "1337"         ; Pattern to search for
+    replace: db "H4CK"         ; Replacement string
+    len: equ 4                 ; Length of strings (without newline)
 
 section .bss
-    buffer resb 4096           ; Buffer for reading file content
+    buffer: resb 1024          ; Buffer for file content
 
 section .text
     global _start
 
 _start:
-    ; Check if we have exactly one argument
-    pop rcx                     ; Get argc
-    cmp rcx, 2                 ; Should be 2 (program name + filepath)
+    ; Check arguments count
+    pop rax                     ; Get argc
+    cmp rax, 2                 ; Need exactly one argument
     jne exit_error
 
-    ; Get filepath
-    pop rcx                     ; Skip program name
-    pop rdi                     ; Get filepath
+    pop rax                     ; Skip program name
+    pop rdi                     ; Get target filename
 
     ; Open file in read-write mode
     mov rax, 2                 ; sys_open
     mov rsi, 2                 ; O_RDWR
     syscall
 
-    ; Check if open succeeded
+    ; Check if open successful
     cmp rax, 0
     jl exit_error
-    mov r8, rax                ; Save file descriptor
 
+    ; Save file descriptor
+    mov r8, rax
+
+read_loop:
     ; Read file content
     mov rax, 0                 ; sys_read
     mov rdi, r8                ; file descriptor
     mov rsi, buffer            ; buffer
-    mov rdx, 4096             ; buffer size
+    mov rdx, 1024             ; read size
     syscall
 
-    ; Check if read succeeded
-    cmp rax, 0
+    ; Check if read successful
+    test rax, rax
     jle not_found
 
+    ; Save number of bytes read
+    mov r9, rax
+
     ; Search for pattern
-    mov rcx, rax               ; Number of bytes read
-    mov rsi, buffer            ; Start of buffer
-    xor rdx, rdx               ; Initialize counter
+    xor rcx, rcx               ; Initialize counter
 
 search_loop:
-    cmp rdx, rcx               ; Check if we reached end of buffer
-    jge not_found             ; Pattern not found
+    ; Check if we reached end of buffer
+    cmp rcx, r9
+    jge read_loop
 
-    ; Compare current position with pattern
-    mov rdi, pattern           ; Pattern to compare
+    ; Compare with pattern
+    mov rsi, buffer
+    add rsi, rcx
+    mov rdi, pattern
     push rcx
-    push rsi
-    mov rcx, len               ; Length of pattern
-    repe cmpsb                ; Compare bytes
-    pop rsi
-    pop rcx
+    mov rcx, len
+    repe cmpsb
     je found_pattern
-
-    inc rsi                    ; Move to next byte
-    inc rdx
+    pop rcx
+    inc rcx
     jmp search_loop
 
 found_pattern:
-    ; Calculate position for writing
-    sub rsi, len               ; Move back to start of pattern
-    
-    ; Seek to position
+    pop rcx                    ; Clean up stack
+
+    ; Seek to found position
     mov rax, 8                 ; sys_lseek
     mov rdi, r8                ; file descriptor
-    mov rsi, rdx               ; offset
-    mov rdx, 0                 ; SEEK_SET
+    mov rsi, rcx               ; offset
+    xor rdx, rdx              ; SEEK_SET
     syscall
 
     ; Write replacement
     mov rax, 1                 ; sys_write
     mov rdi, r8                ; file descriptor
     mov rsi, replace           ; replacement string
-    mov rdx, len              ; length to write
+    mov rdx, len              ; length
     syscall
 
     ; Close file and exit successfully
+    mov rax, 3                 ; sys_close
     mov rdi, r8
-    call close_file
-    xor rdi, rdi              ; Exit with 0
+    syscall
+
+    xor rdi, rdi              ; Exit code 0
     jmp exit
 
 not_found:
+    ; Close file
+    mov rax, 3                 ; sys_close
     mov rdi, r8
-    call close_file
-    mov rdi, 1                ; Exit with 1
-    jmp exit
+    syscall
 
 exit_error:
-    mov rdi, 1                ; Exit with 1
+    mov rdi, 1                 ; Exit code 1
 
 exit:
     mov rax, 60               ; sys_exit
     syscall
-
-close_file:
-    mov rax, 3                ; sys_close
-    syscall
-    ret
