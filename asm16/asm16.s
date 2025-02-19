@@ -1,118 +1,103 @@
 section .data
-    search_str: db "1337"       ; String to search for
-    replace_str: db "H4CK"      ; String to replace with
-    str_len: equ 4              ; Length of both strings
+    pattern db '1337', 10      ; Pattern to search for (including newline)
+    replace db 'H4CK', 10      ; Replacement string (including newline)
+    len equ 5                  ; Length of pattern/replace (including newline)
 
 section .bss
-    buffer: resb 4096           ; Buffer for reading file
-    filesize: resq 1            ; File size storage
+    buffer resb 4096           ; Buffer for reading file content
 
 section .text
     global _start
 
 _start:
-    ; Check arguments
-    pop rdi                     ; Get argc
-    cmp rdi, 2                 ; Need exactly one argument
+    ; Check if we have exactly one argument
+    pop rcx                     ; Get argc
+    cmp rcx, 2                 ; Should be 2 (program name + filepath)
     jne exit_error
 
-    ; Get filename
-    pop rdi                     ; Skip program name
-    pop rdi                     ; Get target filename
+    ; Get filepath
+    pop rcx                     ; Skip program name
+    pop rdi                     ; Get filepath
 
-    ; Open file read-write
+    ; Open file in read-write mode
     mov rax, 2                 ; sys_open
     mov rsi, 2                 ; O_RDWR
     syscall
 
-    ; Check if open successful
+    ; Check if open succeeded
     cmp rax, 0
     jl exit_error
     mov r8, rax                ; Save file descriptor
 
-read_loop:
-    ; Read chunk of file
+    ; Read file content
     mov rax, 0                 ; sys_read
     mov rdi, r8                ; file descriptor
     mov rsi, buffer            ; buffer
-    mov rdx, 4096             ; chunk size
+    mov rdx, 4096             ; buffer size
     syscall
 
-    ; Check if read successful
+    ; Check if read succeeded
     cmp rax, 0
-    jle not_found              ; End of file or error
+    jle not_found
 
-    ; Save read size
-    mov r9, rax                ; Save bytes read
+    ; Search for pattern
+    mov rcx, rax               ; Number of bytes read
+    mov rsi, buffer            ; Start of buffer
+    xor rdx, rdx               ; Initialize counter
 
-    ; Search for "1337" in buffer
-    mov rcx, r9                ; Number of bytes to search
-    mov rsi, buffer            ; Search in buffer
-    mov rdi, search_str        ; Search for this string
-    
-search_byte:
-    cmp rcx, str_len           ; Need at least 4 bytes left
-    jl read_next_chunk
+search_loop:
+    cmp rdx, rcx               ; Check if we reached end of buffer
+    jge not_found             ; Pattern not found
 
-    ; Compare current position with search string
+    ; Compare current position with pattern
+    mov rdi, pattern           ; Pattern to compare
     push rcx
     push rsi
-    mov rcx, str_len
-    mov rdi, search_str
-    repe cmpsb
+    mov rcx, len               ; Length of pattern
+    repe cmpsb                ; Compare bytes
     pop rsi
     pop rcx
-    je found_string
+    je found_pattern
 
-    ; Move to next byte
-    inc rsi
-    dec rcx
-    jmp search_byte
+    inc rsi                    ; Move to next byte
+    inc rdx
+    jmp search_loop
 
-read_next_chunk:
-    ; Move file pointer back by remaining bytes
-    mov rax, 8                 ; sys_lseek
-    mov rdi, r8                ; file descriptor
-    mov rsi, rcx               ; bytes to move back
-    neg rsi                    ; make it negative for moving back
-    mov rdx, 1                 ; SEEK_CUR
-    syscall
+found_pattern:
+    ; Calculate position for writing
+    sub rsi, len               ; Move back to start of pattern
     
-    jmp read_loop
-
-found_string:
-    ; Calculate position in file
+    ; Seek to position
     mov rax, 8                 ; sys_lseek
     mov rdi, r8                ; file descriptor
-    mov rsi, -4                ; move back 4 bytes
-    mov rdx, 1                 ; SEEK_CUR
+    mov rsi, rdx               ; offset
+    mov rdx, 0                 ; SEEK_SET
     syscall
 
-    ; Write replacement string
+    ; Write replacement
     mov rax, 1                 ; sys_write
     mov rdi, r8                ; file descriptor
-    mov rsi, replace_str       ; replacement string
-    mov rdx, str_len          ; length
+    mov rsi, replace           ; replacement string
+    mov rdx, len              ; length to write
     syscall
 
     ; Close file and exit successfully
     mov rdi, r8
     call close_file
-    xor rdi, rdi              ; Exit code 0
+    xor rdi, rdi              ; Exit with 0
     jmp exit
 
 not_found:
     mov rdi, r8
     call close_file
-    mov rdi, 1                ; Exit code 1
+    mov rdi, 1                ; Exit with 1
+    jmp exit
+
+exit_error:
+    mov rdi, 1                ; Exit with 1
 
 exit:
     mov rax, 60               ; sys_exit
-    syscall
-
-exit_error:
-    mov rdi, 1
-    mov rax, 60
     syscall
 
 close_file:
