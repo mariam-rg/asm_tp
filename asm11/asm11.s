@@ -14,7 +14,7 @@ _start:
     syscall
 
     ; Initialize counter
-    mov r9, 1 ; Supposition initiale que toutes les lettres sont des consonnes
+    xor r9, r9          ; Vowel counter
     mov rsi, buffer     ; Input string pointer
 
 _count_loop:
@@ -37,8 +37,8 @@ _check_vowel:
     jmp _check_vowel
 
 _found_vowel:
-    mov r9, 0 ; Une voyelle a été trouvée
-    jmp _print_result ; Sortie immédiate
+    inc r9                  ; Increment vowel counter
+
 _next_char:
     inc rsi                 ; Next character
     jmp _count_loop
