@@ -1,5 +1,5 @@
 section .bss
-    header: resb 64         ; Increased buffer for full ELF header
+    header: resb 16         ; Buffer for ELF header (first 16 bytes)
 
 section .data
     elf_magic: db 0x7F, "ELF"  ; ELF magic numbers
@@ -21,7 +21,6 @@ _start:
     ; Open file
     mov rax, 2            ; sys_open
     xor rsi, rsi          ; O_RDONLY
-    xor rdx, rdx          ; Mode (not used for O_RDONLY)
     syscall
 
     ; Check if file opened successfully
@@ -31,16 +30,16 @@ _start:
     ; Save file descriptor
     mov r8, rax           ; Store fd in r8
 
-    ; Read first 64 bytes (full ELF header)
+    ; Read first 16 bytes (ELF header)
     mov rax, 0            ; sys_read
     mov rdi, r8           ; fd
     mov rsi, header       ; buffer
-    mov rdx, 64           ; count (increased to read full header)
+    mov rdx, 16           ; count
     syscall
 
     ; Check if read was successful
-    cmp rax, 64
-    jl close_and_not_elf  ; If couldn't read header, not an ELF
+    cmp rax, 16
+    jne close_and_not_elf ; If couldn't read 16 bytes, not an ELF
 
     ; Check ELF magic numbers (0x7F 'E' 'L' 'F')
     mov rsi, header
@@ -49,24 +48,9 @@ _start:
     repe cmpsb
     jne close_and_not_elf ; If not equal, not an ELF
 
-    ; Check if it's 64-bit (EI_CLASS = 2)
-    cmp byte [header + 4], 2
-    jne close_and_not_elf
-
-    ; Check if it's little-endian (EI_DATA = 1)
-    cmp byte [header + 5], 1
-    jne close_and_not_elf
-
-    ; Check if it's a valid version (EI_VERSION = 1)
-    cmp byte [header + 6], 1
-    jne close_and_not_elf
-
-    ; Check if it's an executable (e_type = 2)
-    cmp word [header + 16], 2
-    jne close_and_not_elf
-
-    ; Check machine type (x86-64 = 0x3E)
-    cmp word [header + 18], x86_64_machine
+    ; Check machine type (x86-64 = 0x3E at offset 18)
+    mov al, byte [header + 0x12]  ; e_machine field
+    cmp al, x86_64_machine
     jne close_and_not_elf
 
     ; Close file and exit success
