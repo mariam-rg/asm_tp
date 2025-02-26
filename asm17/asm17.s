@@ -1,7 +1,5 @@
-
 section .bss
     buffer: resb 1024          ; Input buffer
-    shift_val: resb 8          ; Storage for shift value
     result: resb 1024          ; Output buffer
 
 section .text
@@ -20,6 +18,13 @@ _start:
     pop rdi                    ; Get shift argument
     call atoi                  ; Convert ASCII to integer
     mov r12, rax              ; Store shift value
+
+    ; Normalize shift value to be within 0-25
+    mov rdx, 0                ; Clear rdx for division
+    mov rax, r12              ; Get shift value
+    mov rbx, 26               ; Divisor
+    div rbx                   ; Divide by 26
+    mov r12, rdx              ; Store remainder as shift value
 
     ; Read input string
     mov rax, 0                ; sys_read
@@ -60,20 +65,22 @@ process_loop:
 
 process_upper:
     sub al, 'A'               ; Convert to 0-25
-    add al, r12b              ; Add shift
-    mov ah, 26
-    div ah                    ; Divide by 26 for wrap-around
-    add ah, 'A'               ; Convert back to ASCII
-    mov [rdi], ah
+    add rax, r12              ; Add shift
+    mov rdx, 0                ; Clear for division
+    mov rbx, 26
+    div rbx                   ; Divide by 26 for wrap-around
+    add dl, 'A'               ; Convert back to ASCII
+    mov [rdi], dl             ; Store result
     jmp next_char
 
 process_lower:
     sub al, 'a'               ; Convert to 0-25
-    add al, r12b              ; Add shift
-    mov ah, 26
-    div ah                    ; Divide by 26 for wrap-around
-    add ah, 'a'               ; Convert back to ASCII
-    mov [rdi], ah
+    add rax, r12              ; Add shift
+    mov rdx, 0                ; Clear for division
+    mov rbx, 26
+    div rbx                   ; Divide by 26 for wrap-around
+    add dl, 'a'               ; Convert back to ASCII
+    mov [rdi], dl             ; Store result
     jmp next_char
 
 not_alpha:
