@@ -11,17 +11,17 @@ section .text
 
 _start:
     ; Check arguments count
-    pop rax                    ; Get argc
+    pop rax                   ; Get argc
     cmp rax, 2                ; Need exactly one argument
     jne exit_error
 
-    pop rax                    ; Skip program name
-    pop rdi                    ; Get target filename
+    pop rax                   ; Skip program name
+    pop rdi                   ; Get target filename
 
     ; Open file in read-write mode
     mov rax, 2                ; sys_open
     mov rsi, 2                ; O_RDWR
-    xor rdx, rdx              ; File permissions (not needed but good practice)
+    xor rdx, rdx              ; Mode (permissions - important to set)
     syscall
 
     ; Check if open successful
@@ -55,24 +55,33 @@ search_loop:
     jge read_loop
 
     ; Compare with pattern
-    lea rsi, [buffer+rcx]     ; Calculate address properly
+    mov rsi, buffer
+    add rsi, rcx
     mov rdi, pattern
-    push rcx                  ; Save counter
+
+    ; Save important registers before comparison
+    push rcx
+    push r8
+    push r9
+
+    ; Set up for comparison
     mov rcx, len
-    push r8                   ; Save file descriptor
-    push r9                   ; Save bytes read counter
-    repe cmpsb                ; Compare strings
-    pop r9                    ; Restore bytes read counter
-    pop r8                    ; Restore file descriptor
+    repe cmpsb
 
-    pushf                     ; Save flags result from comparison
-    pop rax                   ; Get flags into rax
-    pop rcx                   ; Restore counter
+    ; Save flags
+    pushf
 
-    test rax, 0x40            ; Test ZF (Zero Flag)
-    jnz found_pattern         ; If pattern matches
+    ; Restore registers
+    pop rax  ; Flags into rax
+    pop r9
+    pop r8
+    pop rcx
 
-    inc rcx                   ; Next byte
+    ; Check if match found (ZF=1)
+    and rax, 0x40  ; ZF is bit 6
+    jnz found_pattern
+
+    inc rcx
     jmp search_loop
 
 found_pattern:
