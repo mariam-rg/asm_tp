@@ -167,7 +167,7 @@ handle_timeout:
     mov rsi, timeout_msg        ; Timeout message
     mov rdx, timeout_msg_len    ; Length
     syscall
-    
+
     ; Exit with error code 1
     mov rdi, 1                  ; Return 1 (timeout)
     jmp exit
@@ -181,7 +181,7 @@ exit:
     mov rax, 3                  ; sys_close
     mov rdi, [sockfd]           ; Socket descriptor
     syscall
-    
+
     ; Exit program
     mov rax, 60                 ; sys_exit
     ; rdi already contains exit code
