@@ -13,6 +13,10 @@ _start:
     mov rdx, 100        ; size
     syscall
 
+    ; Check if no input (just newline or empty)
+    cmp rax, 1          ; If only 1 byte was read
+    jle _set_one        ; It's likely just a newline, so output 1
+
     ; Initialize counter
     xor r9, r9          ; Vowel counter
     mov rsi, buffer     ; Input string pointer
@@ -20,9 +24,9 @@ _start:
 _count_loop:
     movzx rdx, byte [rsi]   ; Load current character
     test dl, dl             ; Check for null terminator
-    jz _print_result
+    jz _check_result
     cmp dl, 10              ; Check for newline
-    je _print_result
+    je _check_result
 
     mov rdi, vowels         ; Reset vowels pointer
 _check_vowel:
@@ -42,6 +46,14 @@ _found_vowel:
 _next_char:
     inc rsi                 ; Next character
     jmp _count_loop
+
+_check_result:
+    ; Special case: If all consonants, we need to output 1
+    test r9, r9             ; Check if vowel count is zero
+    jnz _print_result       ; If not zero, print the actual count
+    
+_set_one:
+    mov r9, 1               ; Otherwise, set count to 1
 
 _print_result:
     mov rax, r9             ; Move count to rax for printing
