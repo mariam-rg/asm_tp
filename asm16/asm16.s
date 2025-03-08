@@ -18,53 +18,10 @@ _start:
     pop rax                   ; Skip program name
     pop rdi                   ; Get target filename
 
-    ; Open file in read-only first to check if it's valid
-    mov rax, 2                ; sys_open
-    mov rsi, 0                ; O_RDONLY
-    xor rdx, rdx              ; Mode (not needed for read-only)
-    syscall
-
-    ; Check if open successful
-    cmp rax, 0
-    jl exit_error
-
-    ; Save file descriptor
-    mov r8, rax
-
-    ; Read some bytes to determine file type
-    mov rax, 0                ; sys_read
-    mov rdi, r8               ; file descriptor
-    mov rsi, buffer           ; buffer
-    mov rdx, 4                ; read first 4 bytes
-    syscall
-
-    ; Close this file descriptor
-    mov rax, 3                ; sys_close
-    mov rdi, r8
-    syscall
-
-    ; Check ELF magic number (first 4 bytes should be 0x7F, 'E', 'L', 'F')
-    cmp byte [buffer], 0x7F
-    jne regular_file
-    cmp byte [buffer+1], 'E'
-    jne regular_file
-    cmp byte [buffer+2], 'L'
-    jne regular_file
-    cmp byte [buffer+3], 'F'
-    jne regular_file
-
-    ; It's an ELF file (executable), don't modify it
-    jmp exit_error
-
-regular_file:
-    ; Reopen file in read-write mode
-    pop rax                   ; Get argc again (restore stack)
-    pop rax                   ; Skip program name
-    pop rdi                   ; Get target filename again
-
+    ; Open file in read-write mode
     mov rax, 2                ; sys_open
     mov rsi, 2                ; O_RDWR
-    xor rdx, rdx              ; Mode (permissions)
+    xor rdx, rdx              ; Mode (permissions - important to set)
     syscall
 
     ; Check if open successful
@@ -97,27 +54,33 @@ search_loop:
     cmp rcx, r9
     jge read_loop
 
-    ; Check if we have enough bytes left for pattern
-    mov rax, r9
-    sub rax, rcx
-    cmp rax, len
-    jl next_byte  ; Not enough bytes left, move to next byte
-
     ; Compare with pattern
-    mov rsi, 0
-    
-pattern_check:
-    mov al, byte [buffer+rcx+rsi]
-    cmp al, byte [pattern+rsi]
-    jne next_byte
-    inc rsi
-    cmp rsi, len
-    jl pattern_check
-    
-    ; If we get here, pattern found
-    jmp found_pattern
+    mov rsi, buffer
+    add rsi, rcx
+    mov rdi, pattern
 
-next_byte:
+    ; Save important registers before comparison
+    push rcx
+    push r8
+    push r9
+
+    ; Set up for comparison
+    mov rcx, len
+    repe cmpsb
+
+    ; Save flags
+    pushf
+
+    ; Restore registers
+    pop rax  ; Flags into rax
+    pop r9
+    pop r8
+    pop rcx
+
+    ; Check if match found (ZF=1)
+    and rax, 0x40  ; ZF is bit 6
+    jnz found_pattern
+
     inc rcx
     jmp search_loop
 
