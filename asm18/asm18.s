@@ -1,7 +1,3 @@
-; asm18.asm - UDP client with timeout
-; x86-64 NASM syntax program that sends a UDP request to 127.0.0.1:1337
-; and waits for a response with a 1-second timeout
-
 section .data
     ; Socket constants
     AF_INET     equ 2            ; IPv4 protocol
