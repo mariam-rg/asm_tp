@@ -53,34 +53,28 @@ search_loop:
     ; Check if we reached end of buffer
     cmp rcx, r9
     jge read_loop
+    
+    ; Check if we have enough bytes left for pattern
+    mov rax, r9
+    sub rax, rcx
+    cmp rax, len
+    jl inc_counter  ; Not enough bytes left, move to next byte
 
     ; Compare with pattern
-    mov rsi, buffer
-    add rsi, rcx
-    mov rdi, pattern
+    mov rsi, 0
+    
+pattern_check:
+    mov al, byte [buffer+rcx+rsi]
+    cmp al, byte [pattern+rsi]
+    jne inc_counter
+    inc rsi
+    cmp rsi, len
+    jl pattern_check
+    
+    ; If we get here, pattern found
+    jmp found_pattern
 
-    ; Save important registers before comparison
-    push rcx
-    push r8
-    push r9
-
-    ; Set up for comparison
-    mov rcx, len
-    repe cmpsb
-
-    ; Save flags
-    pushf
-
-    ; Restore registers
-    pop rax  ; Flags into rax
-    pop r9
-    pop r8
-    pop rcx
-
-    ; Check if match found (ZF=1)
-    and rax, 0x40  ; ZF is bit 6
-    jnz found_pattern
-
+inc_counter:
     inc rcx
     jmp search_loop
 
